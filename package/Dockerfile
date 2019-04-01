@@ -1,5 +1,5 @@
 FROM ubuntu:18.04
-RUN apt-get update && apt-get install -y git curl ca-certificates unzip xz-utils && \
+RUN apt-get update && apt-get install -y git curl ca-certificates unzip xz-utils jq && \
     useradd rancher && \
     mkdir -p /var/lib/rancher/etcd /var/lib/cattle && \
     chown -R rancher /var/lib/rancher /var/lib/cattle /usr/local/bin
@@ -12,6 +12,7 @@ RUN mkdir /root/.kube && \
 WORKDIR /var/lib/rancher
 
 ARG ARCH=amd64
+ARG OAUTH_TOKEN=${OAUTH_TOKEN}
 ENV CATTLE_HELM_VERSION v2.10.0-rancher10
 ENV CATTLE_MACHINE_VERSION v0.15.0-rancher6-1
 ENV LOGLEVEL_VERSION v0.1.2
@@ -40,7 +41,7 @@ RUN curl -sLf ${!TINI_URL} > /usr/bin/tini && \
     chmod +x /usr/bin/helm /usr/bin/tini /usr/bin/telemetry /usr/bin/tiller
 
 ENV CATTLE_UI_PATH /usr/share/rancher/ui
-ENV CATTLE_UI_VERSION 2.2.19
+ENV CATTLE_UI_VERSION 2.2.19-cn
 ENV CATTLE_CLI_VERSION v2.2.0
 
 # Please update the api-ui-version in pkg/settings/settings.go when updating the version here.
@@ -56,7 +57,10 @@ VOLUME /var/log/auditlog
 
 RUN mkdir -p /usr/share/rancher/ui && \
     cd /usr/share/rancher/ui && \
-    curl -sL https://releases.rancher.com/ui/${CATTLE_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
+    export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-ui/releases/latest | jq -r '.assets[0].id') && \
+    curl -O -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/pandaria-ui/releases/assets/$ASSET_ID && \
+    tar xvzf ${CATTLE_UI_VERSION}.tar.gz --strip-components=1 && \
+    #curl -sL https://releases.rancher.com/ui/${CATTLE_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
     mkdir -p /usr/share/rancher/ui/api-ui && \
     cd /usr/share/rancher/ui/api-ui && \
     curl -sL https://releases.rancher.com/api-ui/${CATTLE_API_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
