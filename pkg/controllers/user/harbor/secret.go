@@ -45,8 +45,7 @@ func Register(ctx context.Context, cluster *config.UserContext) {
 func (c *Controller) syncSettings(key string, obj *v3.Setting) (runtime.Object, error) {
 	// sync harbor registry secret when HarborServer and HarborAdminAuth changed
 	if settings.HarborAdminAuth.Name == obj.Name {
-		adminAuth := settings.HarborAdminAuth.Get()
-		return c.syncSecret(adminAuth, "", false)
+		return c.syncSecret(obj.Value, "", false)
 	} else if settings.HarborServer.Name == obj.Name {
 		// update all harbor registry secret
 		return c.syncSecret("", "", true)
@@ -56,6 +55,9 @@ func (c *Controller) syncSettings(key string, obj *v3.Setting) (runtime.Object, 
 }
 
 func (c *Controller) syncUser(key string, obj *v3.User) (runtime.Object, error) {
+	if obj == nil || obj.DeletionTimestamp != nil {
+		return nil, nil
+	}
 	annotations := obj.Annotations
 	if annotations != nil && annotations[harborUserAnnotationAuth] != "" && annotations[harborUserAnnotationEmail] != "" {
 		return c.syncSecret(annotations[harborUserAnnotationAuth], annotations[harborUserAnnotationEmail], false)
