@@ -41,7 +41,7 @@ RUN curl -sLf ${!TINI_URL} > /usr/bin/tini && \
     chmod +x /usr/bin/helm /usr/bin/tini /usr/bin/telemetry /usr/bin/tiller
 
 ENV CATTLE_UI_PATH /usr/share/rancher/ui
-ENV CATTLE_UI_VERSION 2.2.19-cn
+ENV CATTLE_UI_VERSION v2.2.19-cn
 ENV CATTLE_CLI_VERSION v2.2.0
 
 # Please update the api-ui-version in pkg/settings/settings.go when updating the version here.
@@ -75,7 +75,7 @@ ENV CATTLE_SERVER_VERSION ${VERSION}
 COPY entrypoint.sh rancher /usr/bin/
 RUN chmod +x /usr/bin/entrypoint.sh
 
-ENV CATTLE_AGENT_IMAGE rancher/rancher-agent:${VERSION}
+ENV CATTLE_AGENT_IMAGE cnrancher/rancher-agent:${VERSION}
 ENV CATTLE_WINDOWS_AGENT_IMAGE rancher/rancher-agent:${VERSION}-nanoserver-1803
 ENV CATTLE_SERVER_IMAGE rancher/rancher
 ENV ETCD_UNSUPPORTED_ARCH=${ARCH}
