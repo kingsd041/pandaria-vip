@@ -58,6 +58,7 @@ var (
 	RotateCertsIfExpiringInDays     = NewSetting("rotate-certs-if-expiring-in-days", "7")  // 7 days
 	HarborServer                    = NewSetting("harbor-server", "")
 	HarborAdminAuth                 = NewSetting("harbor-admin-auth", "")
+	AuditlogServer                  = NewSetting("auditlog-server-url", "")
 )
 
 func init() {

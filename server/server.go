@@ -121,6 +121,7 @@ func newAuthed(tokenAPI http.Handler, managementAPI http.Handler, k8sproxy http.
 	authed.Path("/meta/aksVirtualNetworks").Handler(capabilities.NewAKSVirtualNetworksHandler())
 	authed.PathPrefix("/meta/proxy").Handler(newProxy(scaledContext))
 	authed.PathPrefix("/meta/harbor").Handler(newHarborProxy(scaledContext))
+	authed.PathPrefix("/meta/auditlog").Handler(newAuditlogProxy(scaledContext))
 	authed.PathPrefix("/meta").Handler(managementAPI)
 	authed.PathPrefix("/v3/identit").Handler(tokenAPI)
 	authed.PathPrefix("/v3/token").Handler(tokenAPI)
@@ -145,4 +146,8 @@ func newProxy(scaledContext *config.ScaledContext) http.Handler {
 
 func newHarborProxy(scaledContext *config.ScaledContext) http.Handler {
 	return httpproxy.NewHarborProxy("/harbor/", whitelist.Proxy.Get, scaledContext)
+}
+
+func newAuditlogProxy(scaledContext *config.ScaledContext) http.Handler {
+	return httpproxy.NewAuditlogProxy("/auditlog/", whitelist.Proxy.Get, scaledContext)
 }
