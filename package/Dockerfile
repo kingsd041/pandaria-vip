@@ -57,9 +57,10 @@ VOLUME /var/log/auditlog
 
 RUN mkdir -p /usr/share/rancher/ui && \
     cd /usr/share/rancher/ui && \
-    export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-ui/releases/latest | jq -r '.assets[0].id') && \
+    export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-ui/releases/tags/${CATTLE_UI_VERSION} | jq -r '.assets[0].id') && \
+    export ASSET_NAME=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-ui/releases/tags/${CATTLE_UI_VERSION} | jq -r '.assets[0].name') && \
     curl -O -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/pandaria-ui/releases/assets/$ASSET_ID && \
-    tar xvzf ${CATTLE_UI_VERSION}.tar.gz --strip-components=1 && \
+    tar xvzf ${ASSET_NAME} --strip-components=1 && \
     #curl -sL https://releases.rancher.com/ui/${CATTLE_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
     mkdir -p /usr/share/rancher/ui/api-ui && \
     cd /usr/share/rancher/ui/api-ui && \
