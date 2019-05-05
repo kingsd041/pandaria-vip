@@ -1,0 +1,140 @@
+---
+kind: pipeline
+name: default-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  pull: default
+  image: rancher/dapper:v0.4.1
+  environment:
+    OAUTH_TOKEN:
+      from_secret: ui_token
+  commands:
+  - dapper ci
+  privileged: true
+  volumes:
+  - name: docker
+    path: /var/run/docker.sock
+  when:
+    event:
+    - push
+    - pull_request
+    - tag
+
+- name: stage-binaries
+  pull: default
+  image: rancher/dapper:v0.4.1
+  commands:
+  - "cp -r ./bin/* ./package/"
+  when:
+    event:
+    - push
+    - tag
+
+- name: docker-publish-master
+  pull: default
+  image: plugins/docker
+  environment:
+    OAUTH_TOKEN:
+      from_secret: ui_token
+  settings:
+    build_args:
+    - ARCH=amd64
+    - VERSION=v2.2-cn-dev
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher
+    tag: v2.2-cn-dev
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - release/v2.2-cn
+    event:
+    - push
+
+- name: docker-publish-master-agent
+  pull: default
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=amd64
+    - VERSION=v2.2-cn-dev
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile.agent
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher-agent
+    tag: v2.2-cn-dev
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - release/v2.2-cn
+    event:
+    - push
+
+- name: docker-publish
+  pull: default
+  image: plugins/docker
+  environment:
+    OAUTH_TOKEN:
+      from_secret: ui_token
+  settings:
+    build_args:
+    - ARCH=amd64
+    - "VERSION=${DRONE_TAG}"
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher
+    tag: "${DRONE_TAG}"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+
+- name: docker-publish-agent
+  pull: default
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=amd64
+    - "VERSION=${DRONE_TAG}"
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile.agent
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher-agent
+    tag: "${DRONE_TAG}"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+
+volumes:
+- name: docker
+  host:
+    path: /var/run/docker.sock
+
+node:
+  instance: agent-amd64
+
+trigger:
+  event:
+    exclude:
+    - promote
+...

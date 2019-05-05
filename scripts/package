@@ -11,7 +11,6 @@ cd $(dirname $0)/../package
 
 TAG=${TAG:-${VERSION}${SUFFIX}}
 REPO=${REPO:-cnrancher}
-OAUTH_TOKEN=${OAUTH_TOKEN}
 
 if echo $TAG | grep -q dirty; then
     TAG=dev
@@ -30,7 +29,7 @@ if [ ${ARCH} == arm64 ]; then
     sed -i -e '$a\' -e 'ENV ETCD_UNSUPPORTED_ARCH=arm64' Dockerfile
 fi
 
-docker build --build-arg VERSION=${TAG} --build-arg ARCH=${ARCH} --build-arg OAUTH_TOKEN=${OAUTH_TOKEN} -t ${IMAGE} .
+docker build --build-arg VERSION=${TAG} --build-arg ARCH=${ARCH} -t ${IMAGE} .
 docker build --build-arg VERSION=${TAG} --build-arg ARCH=${ARCH} -t ${AGENT_IMAGE} -f Dockerfile.agent .
 echo ${IMAGE} > ../dist/images
 echo ${AGENT_IMAGE} >> ../dist/images
