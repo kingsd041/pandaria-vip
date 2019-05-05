@@ -1,5 +1,5 @@
 FROM ubuntu:18.04
-RUN apt-get update && apt-get install -y git curl ca-certificates unzip xz-utils jq && \
+RUN apt-get update && apt-get install -y git curl ca-certificates unzip xz-utils && \
     useradd rancher && \
     mkdir -p /var/lib/rancher/etcd /var/lib/cattle && \
     chown -R rancher /var/lib/rancher /var/lib/cattle /usr/local/bin
@@ -12,7 +12,6 @@ RUN mkdir /root/.kube && \
 WORKDIR /var/lib/rancher
 
 ARG ARCH=amd64
-ARG OAUTH_TOKEN=${OAUTH_TOKEN}
 ENV CATTLE_HELM_VERSION v2.10.0-rancher10
 ENV CATTLE_MACHINE_VERSION v0.15.0-rancher6-1
 ENV LOGLEVEL_VERSION v0.1.2
@@ -57,11 +56,7 @@ VOLUME /var/log/auditlog
 
 RUN mkdir -p /usr/share/rancher/ui && \
     cd /usr/share/rancher/ui && \
-    export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-ui/releases/tags/${CATTLE_UI_VERSION} | jq -r '.assets[0].id') && \
-    export ASSET_NAME=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-ui/releases/tags/${CATTLE_UI_VERSION} | jq -r '.assets[0].name') && \
-    curl -O -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/pandaria-ui/releases/assets/$ASSET_ID && \
-    tar xvzf ${ASSET_NAME} --strip-components=1 && \
-    #curl -sL https://releases.rancher.com/ui/${CATTLE_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
+    curl -sL https://s3-ap-northeast-1.amazonaws.com/pandaria-ui/releases/${CATTLE_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
     mkdir -p /usr/share/rancher/ui/api-ui && \
     cd /usr/share/rancher/ui/api-ui && \
     curl -sL https://releases.rancher.com/api-ui/${CATTLE_API_UI_VERSION}.tar.gz | tar xvzf - --strip-components=1 && \
