@@ -57,6 +57,7 @@ steps:
   when:
     branch:
     - release/v2.2-cn
+    - release/v2.2.2-patch-cn
     event:
     - push
 
@@ -79,6 +80,7 @@ steps:
   when:
     branch:
     - release/v2.2-cn
+    - release/v2.2.2-patch-cn
     event:
     - push
 
