@@ -43,10 +43,10 @@ func Register(ctx context.Context, cluster *config.UserContext) {
 }
 
 func (c *Controller) syncSettings(key string, obj *v3.Setting) (runtime.Object, error) {
-	// sync harbor registry secret when HarborServer and HarborAdminAuth changed
+	// sync harbor registry secret when HarborServerURL and HarborAdminAuth changed
 	if settings.HarborAdminAuth.Name == obj.Name {
 		return c.syncSecret(obj.Value, "", false)
-	} else if settings.HarborServer.Name == obj.Name {
+	} else if settings.HarborServerURL.Name == obj.Name {
 		// update all harbor registry secret
 		return c.syncSecret("", "", true)
 	}
@@ -80,7 +80,7 @@ func (c *Controller) syncSecret(auth, email string, isUpdateServer bool) (runtim
 		return nil, nil
 	}
 	// get harbor server
-	harborServerStr := settings.HarborServer.Get()
+	harborServerStr := settings.HarborServerURL.Get()
 	harborServerArray := strings.Split(harborServerStr, "://")
 	harborServer := ""
 	if len(harborServerArray) != 2 {

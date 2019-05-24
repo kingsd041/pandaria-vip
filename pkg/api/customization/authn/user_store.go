@@ -20,11 +20,6 @@ import (
 
 const userByUsernameIndex = "auth.management.cattle.io/user-by-username"
 
-const (
-	HarborUserAnnotationAuth  = "authz.management.cattle.io.cn/harborauth"
-	HarborUserAnnotationEmail = "authz.management.cattle.io.cn/harboremail"
-)
-
 type userStore struct {
 	types.Store
 	mu          sync.Mutex
