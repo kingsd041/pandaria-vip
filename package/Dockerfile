@@ -77,6 +77,14 @@ ENV CATTLE_SERVER_IMAGE rancher/rancher
 ENV ETCD_UNSUPPORTED_ARCH=${ARCH}
 
 ENV SSL_CERT_DIR /etc/rancher/ssl
+
+ENV NETWORK_ADDONS_DIR /var/lib/rancher/network-addons
+ENV MACVLAN_NETWORK_ADDON_NAME multus-flannel-macvlan
+ENV MACVLAN_NETWORK_ADDON_VERSION v0.3.0
+ENV MACVLAN_NETWORK_ADDON_URL https://github.com/cnrancher/network-controller/releases/download/${MACVLAN_NETWORK_ADDON_VERSION}/${MACVLAN_NETWORK_ADDON_NAME}.yml
+RUN mkdir -p ${NETWORK_ADDONS_DIR} && \
+    curl -sLf ${MACVLAN_NETWORK_ADDON_URL} > ${NETWORK_ADDONS_DIR}/${MACVLAN_NETWORK_ADDON_NAME}.yaml
+
 VOLUME /var/lib/rancher
 
 ENTRYPOINT ["entrypoint.sh"]
