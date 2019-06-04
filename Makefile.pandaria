@@ -1,0 +1,28 @@
+TARGETS := $(shell ls scripts)
+
+.dapper:
+	@echo Downloading dapper
+	@curl -sL https://releases.rancher.com/dapper/latest/dapper-`uname -s`-`uname -m` > .dapper.tmp
+	@@chmod +x .dapper.tmp
+	@./.dapper.tmp -v
+	@mv .dapper.tmp .dapper
+
+$(TARGETS): .dapper
+	rm -rf vendor/github.com/rancher/types/*
+	cp -r .vendor_pandaria/github.com/rancher/types/* vendor/github.com/rancher/types/
+	cp package/Dockerfile.pandaria package/Dockerfile
+	cp package/Dockerfile_pandaria.agent package/Dockerfile.agent
+	./.dapper -f Dockerfile_pandaria.dapper $@
+	git checkout package/Dockerfile package/Dockerfile.agent vendor/
+
+trash: .dapper
+	./.dapper -f Dockerfile_pandaria.dapper -m bind trash -f vendor_pandaria.conf -T .vendor_pandaria
+
+trash-keep: .dapper
+	./.dapper -f Dockerfile_pandaria.dapper -m bind trash -k -f vendor_pandaria.conf -T .vendor_pandaria
+
+deps: trash
+
+.DEFAULT_GOAL := ci
+
+.PHONY: $(TARGETS)

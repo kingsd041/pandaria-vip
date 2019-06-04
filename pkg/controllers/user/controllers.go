@@ -39,6 +39,9 @@ import (
 	"github.com/rancher/types/config"
 	"github.com/rancher/types/factory"
 
+	// pandaria
+	"github.com/rancher/rancher/pkg/controllers/user/harbor"
+
 	// init upgrade implement
 	_ "github.com/rancher/rancher/pkg/controllers/user/alert/deployer"
 	_ "github.com/rancher/rancher/pkg/controllers/user/logging/deployer"
@@ -67,6 +70,7 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 	globaldns.Register(ctx, cluster)
 	alert.Register(ctx, cluster)
 	monitoring.Register(ctx, cluster)
+	harbor.Register(ctx, cluster)
 
 	if clusterRec.Spec.LocalClusterAuthEndpoint.Enabled {
 		err := clusterauthtoken.CRDSetup(ctx, cluster.UserOnlyContext())

@@ -18,6 +18,8 @@ import (
 
 func (h *Handler) UserFormatter(apiContext *types.APIContext, resource *types.RawResource) {
 	resource.AddAction(apiContext, "setpassword")
+	resource.AddAction(apiContext, "setharborauth")
+	resource.AddAction(apiContext, "updateharborauth")
 	if canRefresh := h.userCanRefresh(apiContext); canRefresh {
 		resource.AddAction(apiContext, "refreshauthprovideraccess")
 	}
@@ -48,6 +50,14 @@ func (h *Handler) Actions(actionName string, action *types.Action, apiContext *t
 		}
 	case "refreshauthprovideraccess":
 		if err := h.refreshAttributes(actionName, action, apiContext); err != nil {
+			return err
+		}
+	case "setharborauth":
+		if err := h.setHarborAuth(actionName, action, apiContext); err != nil {
+			return err
+		}
+	case "updateharborauth":
+		if err := h.updateHarborAuth(actionName, action, apiContext); err != nil {
 			return err
 		}
 	default:
