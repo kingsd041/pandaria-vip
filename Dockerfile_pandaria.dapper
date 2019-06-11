@@ -59,7 +59,8 @@ WORKDIR ${DAPPER_SOURCE}
 
 # Pandaria
 ENV REPO=cnrancher \
-    NODIRTY=1
+    NODIRTY=1 \
+    UI_INDEX=local
 
 ENTRYPOINT ["./scripts/entry"]
 CMD ["ci"]

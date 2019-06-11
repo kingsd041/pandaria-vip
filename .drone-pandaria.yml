@@ -14,7 +14,8 @@ steps:
     OAUTH_TOKEN:
       from_secret: ui_token
   commands:
-  - dapper -f Dockerfile_pandaria.dapper ci
+  - apk add git make curl
+  - make -f Makefile.pandaria
   privileged: true
   volumes:
   - name: docker
