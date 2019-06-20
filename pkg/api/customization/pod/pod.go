@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -111,7 +112,7 @@ func (a ActionWrapper) downloadPodFile(apiContext *types.APIContext, clusterCont
 
 	data := map[string]interface{}{
 		"type": "podFileDownloadOutput",
-		projectclient.PodFileDownloadOutputFieldFileContent: string(b),
+		projectclient.PodFileDownloadOutputFieldFileContent: base64.StdEncoding.EncodeToString(b),
 	}
 	apiContext.WriteResponse(http.StatusOK, data)
 	return nil
