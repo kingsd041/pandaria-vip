@@ -9,6 +9,7 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/management/compose/common"
 	"github.com/rancher/rancher/pkg/controllers/user/alert"
 	"github.com/rancher/rancher/pkg/controllers/user/approuter"
+	"github.com/rancher/rancher/pkg/controllers/user/certsexpiration"
 	"github.com/rancher/rancher/pkg/controllers/user/clusterauthtoken"
 	"github.com/rancher/rancher/pkg/controllers/user/dnsrecord"
 	"github.com/rancher/rancher/pkg/controllers/user/endpoints"
@@ -71,6 +72,7 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 	alert.Register(ctx, cluster)
 	monitoring.Register(ctx, cluster)
 	harbor.Register(ctx, cluster)
+	certsexpiration.Register(ctx, cluster)
 
 	if clusterRec.Spec.LocalClusterAuthEndpoint.Enabled {
 		err := clusterauthtoken.CRDSetup(ctx, cluster.UserOnlyContext())
