@@ -45,7 +45,7 @@ spec:
         # - name: DRY_RUN
           # value: "true"
         image: agent_image
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: cleanup-agent
         resources: {}
         terminationMessagePath: /dev/termination-log
