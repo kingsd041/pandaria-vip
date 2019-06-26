@@ -1,4 +1,6 @@
 TARGETS := $(shell ls scripts)
+THIS_FILE := $(lastword $(MAKEFILE_LIST))
+DAPPER_PANDARIA := Dockerfile_pandaria.dapper
 
 .dapper:
 	@echo Downloading dapper
@@ -7,25 +9,30 @@ TARGETS := $(shell ls scripts)
 	@./.dapper.tmp -v
 	@mv .dapper.tmp .dapper
 
-$(TARGETS): .dapper
+prepare:
 	rm -rf vendor/github.com/rancher/types/*
 	cp -r .vendor_pandaria/github.com/rancher/types/* vendor/github.com/rancher/types/
 	cp package/Dockerfile.pandaria package/Dockerfile
 	cp package/Dockerfile_pandaria.agent package/Dockerfile.agent
-	./.dapper -f Dockerfile_pandaria.dapper $@
+
+reset:
 	git checkout package/Dockerfile package/Dockerfile.agent vendor/
 	git clean -dxf vendor/
 
+$(TARGETS): .dapper prepare
+	./.dapper -f $(DAPPER_PANDARIA) $@
+	$(MAKE) -f $(THIS_FILE) reset
+
 trash: .dapper
-	./.dapper -f Dockerfile_pandaria.dapper -m bind trash -f vendor_pandaria.conf -T .vendor_pandaria
+	./.dapper -f $(DAPPER_PANDARIA) -m bind trash -f vendor_pandaria.conf -T .vendor_pandaria
 
 trash-keep: .dapper
-	./.dapper -f Dockerfile_pandaria.dapper -m bind trash -k -f vendor_pandaria.conf -T .vendor_pandaria
+	./.dapper -f $(DAPPER_PANDARIA) -m bind trash -k -f vendor_pandaria.conf -T .vendor_pandaria
 
 deps: trash
 
 shell-bind: .dapper
-	./.dapper -f Dockerfile_pandaria.dapper -m bind -s
+	./.dapper -f $(DAPPER_PANDARIA) -m bind -s
 
 .DEFAULT_GOAL := ci
 
