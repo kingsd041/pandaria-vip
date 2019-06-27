@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -169,6 +170,11 @@ func (h *Helm) LoadIndex() (*RepoIndex, error) {
 
 func (h *Helm) fetchTgz(url string) ([]v3.File, error) {
 	var files []v3.File
+
+	// fix for pandaria
+	if !strings.HasPrefix(url, "http:") || !strings.HasPrefix(url, "https:") {
+		url = fmt.Sprintf("%s/%s", h.url, url)
+	}
 
 	logrus.Debugf("Helm fetching file %s", url)
 	resp, err := h.request(url, "GET")
