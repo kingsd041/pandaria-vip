@@ -131,6 +131,10 @@ func (c *Client) GetDomain() (d *model.Domain, err error) {
 		return d, errors.Wrap(err, "GetDomain: failed to execute a request")
 	}
 
+	if o.Data.Fqdn == "" {
+		return nil, nil
+	}
+
 	return &o.Data, nil
 }
 
@@ -153,15 +157,8 @@ func (c *Client) CreateDomain(hosts []string) (string, error) {
 		return "", errors.Wrap(err, "CreateDomain: failed to execute a request")
 	}
 
-	//to find token in management cluster namespace
-	if _, _, err = c.getSecret(); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return "", err
-		}
-		//if token not found, create a new one
-		if err = c.setSecret(&resp); err != nil {
-			return "", err
-		}
+	if err = c.setSecret(&resp); err != nil {
+		return "", err
 	}
 
 	return resp.Data.Fqdn, err
@@ -256,7 +253,7 @@ func (c *Client) SetBaseURL(base string) {
 }
 
 func (c *Client) setSecret(resp *model.Response) error {
-	_, err := c.secrets.Create(&k8scorev1.Secret{
+	s := &k8scorev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretKey,
 			Namespace: c.clusterName,
@@ -266,12 +263,18 @@ func (c *Client) setSecret(resp *model.Response) error {
 			"token": resp.Token,
 			"fqdn":  resp.Data.Fqdn,
 		},
-	})
-	if err != nil {
-		if k8serrors.IsAlreadyExists(err) {
-			return nil
-		}
+	}
+	_, err := c.secrets.Create(s)
+
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		return err
+	}
+
+	if err != nil && k8serrors.IsAlreadyExists(err) {
+		if _, err := c.secrets.Update(s); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return nil
