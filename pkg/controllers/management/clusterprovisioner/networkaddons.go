@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
+	"github.com/rancher/rancher/pkg/image"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	"github.com/sirupsen/logrus"
 )
@@ -48,6 +50,7 @@ func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig)
 	}
 
 	content := applyMultusFlannelOption(string(b), cfg.Network.Options)
+	content = resolveSystemRegistry(content)
 	path := fmt.Sprintf("%s.current", template)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
 	if err != nil {
@@ -88,6 +91,7 @@ func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig) e
 	}
 
 	content := applyMultusCanalOption(string(b), cfg.Network.Options)
+	content = resolveSystemRegistry(content)
 	path := fmt.Sprintf("%s.current", template)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
 	if err != nil {
@@ -110,4 +114,21 @@ func applyMultusCanalOption(addons string, option map[string]string) string {
 	}
 
 	return addons
+}
+
+func replaceImage(origin string) string {
+	s := strings.SplitN(origin, ":", 2)
+	if len(s) != 2 {
+		return origin
+	}
+	newImage := "image: " + image.Resolve(strings.TrimLeft(s[1], " "))
+	logrus.Infof("origin image: %s, registry prefixed image: %s", origin, newImage)
+	return newImage
+}
+
+// resolveSystemRegistry find all image field in yaml content
+// and replace with new image value which system registry prefixed
+func resolveSystemRegistry(content string) string {
+	exp := `image:.*`
+	return regexp.MustCompile(exp).ReplaceAllStringFunc(content, replaceImage)
 }
