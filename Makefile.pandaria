@@ -13,13 +13,16 @@ prepare:
 	rm -rf vendor/github.com/rancher/types/*
 	cp -r .vendor_pandaria/github.com/rancher/types/* vendor/github.com/rancher/types/
 	cp chart-pandaria/values.yaml chart/values.yaml
+	cp chart-pandaria/Chart.yaml chart/Chart.yaml
 	cp chart-pandaria/templates/* chart/templates/
 	cp package/Dockerfile.pandaria package/Dockerfile
 	cp package/Dockerfile_pandaria.agent package/Dockerfile.agent
+	cp scripts/chart-pandaria/copy scripts/chart/copy
+	cp scripts/chart-pandaria/index scripts/chart/index
 
 reset:
-	git checkout package/Dockerfile package/Dockerfile.agent vendor/ chart/
-	git clean -dxf vendor/ chart/
+	git checkout package/Dockerfile package/Dockerfile.agent vendor/ chart/ scripts/
+	git clean -dxf vendor/ chart/ scripts/
 
 $(TARGETS): .dapper prepare
 	./.dapper -f $(DAPPER_PANDARIA) $@

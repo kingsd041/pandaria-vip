@@ -126,6 +126,27 @@ steps:
     event:
     - tag
 
+- name: chart-publish
+  image: jacie/drone-aliyun-oss
+  pull: always
+  environment:
+    ALIYUN_ACCESS_KEY_ID:
+      from_secret: aliyun_access_id
+    ALIYUN_SECRET_ACCESS_KEY:
+      from_secret: aliyun_access_secret
+    PLUGIN_SOURCE: bin/chart
+    ALIYUN_BUCKET: oss://pandaria-releases
+    ALIYUN_ENDPOINT: http://oss-cn-beijing.aliyuncs.com
+    PLUGIN_TARGET: server-charts
+    PLUGIN_RECURSIVE: -r
+    PLUGIN_ACCESS: public-read
+  commands:
+    - "aliyun-oss"
+  when:
+    event:
+      - push
+      - tag
+
 volumes:
 - name: docker
   host:
