@@ -8,7 +8,10 @@ antiAffinity: preferred
 # Audit Logs https://rancher.com/docs/rancher/v2.x/en/installation/api-auditing/
 # The audit log is piped to the console of the rancher-audit-log container in the rancher pod.
 # https://rancher.com/docs/rancher/v2.x/en/installation/api-auditing/
-# destination stream to sidecar container console or hostPath volume
+# destination:
+#   sidecar: stream to sidecar container console 
+#   hostPath: stream to hostPath
+#   server: stream to the auditlog server
 # level: Verbosity of logs, 0 to 3. 0 is off 3 is a lot.
 auditLog:
   destination: sidecar
@@ -17,6 +20,24 @@ auditLog:
   maxAge: 1
   maxBackup: 1
   maxSize: 100
+  fluentbitImage: cnrancher/rancher-auditlog-fluentbit
+  fluentbitImageTag: v1.0.0-rc1
+
+# The Mysql should be deployed manually and create the user and database schema for auditlog server.
+# You should use nonadministrative account and a high strength password to connect to the Mysql.
+auditLogServer:
+  image: cnrancher/rancher-auditlog-server
+  imageTag: v1.0.0-rc9
+  replicas: 1
+  antiAffinity: preferred
+  serverPort: 9000
+  DBHost: localhost
+  DBPort: 3306
+  DBUser: root
+  DBPassword: password
+  DBName: rancher
+
+
 
 # Have Rancher detect and import the "local" Rancher server cluster
 # Adding the "local" cluster available in the GUI can be convenient, but any user with access to this cluster has "root" on any of the clusters that Rancher manages.
