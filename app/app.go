@@ -179,6 +179,10 @@ func addData(management *config.ManagementContext, cfg Config) error {
 		return err
 	}
 
+	if err := syncPandariaCatalogs(management); err != nil {
+		return err
+	}
+
 	if err := addSetting(); err != nil {
 		return err
 	}
