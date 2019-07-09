@@ -104,7 +104,9 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("management.cattle.io").resources("clustermonitorgraphs").verbs("get", "list", "watch").
 		addRule().apiGroups("management.cattle.io").resources("etcdbackups").verbs("get", "list", "watch").
 		addRule().apiGroups("management.cattle.io").resources("catalogtemplates").verbs("get", "list", "watch").
-		addRule().apiGroups("management.cattle.io").resources("catalogtemplateversions").verbs("get", "list", "watch")
+		addRule().apiGroups("management.cattle.io").resources("catalogtemplateversions").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch")
 
 	rb.addRoleTemplate("Create Projects", "projects-create", "cluster", true, false, false, false).
 		addRule().apiGroups("management.cattle.io").resources("projects").verbs("create")
@@ -139,7 +141,9 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("management.cattle.io").resources("clusterroletemplatebindings").verbs("*")
 
 	rb.addRoleTemplate("View Cluster Members", "clusterroletemplatebindings-view", "cluster", true, false, false, false).
-		addRule().apiGroups("management.cattle.io").resources("clusterroletemplatebindings").verbs("get", "list", "watch")
+		addRule().apiGroups("management.cattle.io").resources("clusterroletemplatebindings").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch")
 
 	rb.addRoleTemplate("Manage Cluster Catalogs", "clustercatalogs-manage", "cluster", true, false, false, true).
 		addRule().apiGroups("management.cattle.io").resources("clustercatalogs").verbs("*")
@@ -175,6 +179,8 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("management.cattle.io").resources("catalogtemplateversions").verbs("*").
 		addRule().apiGroups("monitoring.cattle.io").resources("prometheus").verbs("view").
 		addRule().apiGroups("monitoring.coreos.com").resources("prometheuses", "prometheusRules", "serviceMonitors").verbs("*").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch").
 		setRoleTemplateNames("admin")
 
 	rb.addRoleTemplate("Project Member", "project-member", "project", true, false, false, false).
@@ -199,6 +205,8 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("management.cattle.io").resources("catalogtemplateversions").verbs("get", "list", "watch").
 		addRule().apiGroups("monitoring.cattle.io").resources("prometheus").verbs("view").
 		addRule().apiGroups("monitoring.coreos.com").resources("prometheuses", "prometheusRules", "serviceMonitors").verbs("*").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch").
 		setRoleTemplateNames("edit")
 
 	rb.addRoleTemplate("Read-only", "read-only", "project", true, false, false, false).
@@ -219,6 +227,8 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("management.cattle.io").resources("projectcatalogs").verbs("get", "list", "watch").
 		addRule().apiGroups("management.cattle.io").resources("projectmonitorgraphs").verbs("get", "list", "watch").
 		addRule().apiGroups("monitoring.coreos.com").resources("prometheuses", "prometheusRules", "serviceMonitors").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch").
 		setRoleTemplateNames("view")
 
 	rb.addRoleTemplate("Create Namespaces", "create-ns", "project", true, false, false, false).
@@ -231,7 +241,9 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		"replicasets", "replicasets/scale", "replicationcontrollers/scale", "horizontalpodautoscalers").verbs("*").
 		addRule().apiGroups("*").resources("limitranges", "pods/log", "pods/status", "replicationcontrollers/status", "resourcequotas", "resourcequotas/status", "bindings").verbs("get", "list", "watch").
 		addRule().apiGroups("project.cattle.io").resources("apps").verbs("*").
-		addRule().apiGroups("management.cattle.io").resources("projectmonitorgraphs").verbs("get", "list", "watch")
+		addRule().apiGroups("management.cattle.io").resources("projectmonitorgraphs").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch")
 
 	rb.addRoleTemplate("View Workloads", "workloads-view", "project", true, false, false, false).
 		addRule().apiGroups("*").resources("pods", "pods/attach", "pods/exec", "pods/portforward", "pods/proxy", "replicationcontrollers",
