@@ -19,6 +19,7 @@ prepare:
 	cp package/Dockerfile_pandaria.agent package/Dockerfile.agent
 	cp scripts/chart-pandaria/copy scripts/chart/copy
 	cp scripts/chart-pandaria/index scripts/chart/index
+	cp scripts/package-pandaria scripts/package
 
 reset:
 	git checkout package/Dockerfile package/Dockerfile.agent vendor/ chart/ scripts/

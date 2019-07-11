@@ -6,7 +6,7 @@ ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
 ENV CATTLE_HELM_VERSION v2.10.0-rancher10
 
 RUN apt-get update && \
-    apt-get install -y gcc ca-certificates git wget curl vim less file xz-utils unzip && \
+    apt-get install -y gcc ca-certificates git wget curl vim less file xz-utils unzip jq && \
     rm -f /bin/sh && ln -s /bin/bash /bin/sh
 RUN curl -sLf https://github.com/rancher/machine-package/releases/download/v0.15.0-rancher5-3/docker-machine-${ARCH}.tar.gz | tar xvzf - -C /usr/bin
 
@@ -65,7 +65,11 @@ WORKDIR ${DAPPER_SOURCE}
 # Pandaria
 ENV REPO=cnrancher \
     NODIRTY=1 \
-    UI_INDEX=local
+    UI_INDEX=local \
+    MACVLAN_NETWORK_ADDON_VERSION=v0.3.9 \
+    AUDITLOG_SERVER_VERSION=v1.0.0-rc10 \
+    AUDITLOG_FLUENTBIT_VERSION=v1.0.0-rc2
+ENV DAPPER_ENV OAUTH_TOKEN
 
 ENTRYPOINT ["./scripts/entry"]
 CMD ["ci"]
