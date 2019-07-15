@@ -329,9 +329,7 @@ data:
     {
       "Network": "{{.ClusterCIDR}}",
       "Backend": {
-        "Type": "{{.FlannelBackend.Type}}",
-        "VNI": {{.FlannelBackend.VNI}},
-        "Port": {{.FlannelBackend.Port}}
+        "Type": "{{.FlannelBackend.Type}}"
       }
     }
 ---
@@ -342,13 +340,13 @@ metadata:
   namespace: kube-system
   labels:
     tier: node
-    app: flannel
+    k8s-app: flannel
 spec:
   template:
     metadata:
       labels:
         tier: node
-        app: flannel
+        k8s-app: flannel
     spec:
       affinity:
         nodeAffinity:
@@ -362,7 +360,6 @@ spec:
       hostNetwork: true
       tolerations:
       - operator: Exists
-        effect: NoSchedule
       {{- if eq .RBACConfig "rbac"}}
       serviceAccountName: flannel
       {{end}}
@@ -434,4 +431,8 @@ spec:
         - name: host-cni-bin
           hostPath:
             path: /opt/cni/bin
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 20%
+    type: RollingUpdate
 `
