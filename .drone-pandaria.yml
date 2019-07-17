@@ -7,6 +7,22 @@ platform:
   arch: amd64
 
 steps:
+- name: pre-check
+  pull: default
+  image: rancher/dapper:v0.4.1
+  commands:
+    - apk add git make curl
+    - make -f Makefile.pandaria pre-check
+  privileged: true
+  volumes:
+    - name: docker
+      path: /var/run/docker.sock
+  when:
+    event:
+      - push
+      - pull_request
+      - tag
+
 - name: build
   pull: default
   image: rancher/dapper:v0.4.1
