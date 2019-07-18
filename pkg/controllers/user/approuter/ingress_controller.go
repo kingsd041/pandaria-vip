@@ -19,9 +19,11 @@ import (
 )
 
 const (
-	annotationIngressClass = "kubernetes.io/ingress.class"
-	ingressClassNginx      = "nginx"
-	maxHost                = 10
+	annotationIngressClass  = "kubernetes.io/ingress.class"
+	annotationGlobalDNS     = "rancher.io/globalDNS.hostname"
+	ingressClassNginx       = "nginx"
+	ingressClassExternalDNS = "rancher-external-dns"
+	maxHost                 = 10
 )
 
 var (
@@ -50,6 +52,18 @@ func (c *Controller) sync(key string, obj *extensionsv1beta1.Ingress) (runtime.O
 	isRDNS := settings.RDNSServerBaseURL.Get()
 	if isRDNS == "" {
 		return nil, nil
+	}
+
+	if _, ok := obj.Annotations[annotationGlobalDNS]; ok {
+		logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+		return nil, nil
+	}
+
+	if v, ok := obj.Annotations[annotationIngressClass]; ok {
+		if v == ingressClassExternalDNS {
+			logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+			return nil, nil
+		}
 	}
 
 	ipDomain := settings.IngressIPDomain.Get()
@@ -155,6 +169,16 @@ func (c *Controller) refreshAll(rootDomain, ipDomain string) error {
 		return err
 	}
 	for _, obj := range ingresses {
+		if _, ok := obj.Annotations[annotationGlobalDNS]; ok {
+			logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+			continue
+		}
+		if v, ok := obj.Annotations[annotationIngressClass]; ok {
+			if v == ingressClassExternalDNS {
+				logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+				continue
+			}
+		}
 		if _, err = c.refresh(rootDomain, obj, ipDomain); err != nil {
 			logrus.WithError(err).Errorf("refresh ingress %s:%s hostname annotation error", obj.Namespace, obj.Name)
 		}
