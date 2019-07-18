@@ -151,7 +151,6 @@ steps:
       path: /var/run/docker.sock
   when:
     event:
-      - push
       - tag
 
 - name: github_binary_prerelease
@@ -208,7 +207,6 @@ steps:
     - "aliyun-oss"
   when:
     event:
-      - push
       - tag
 
 volumes:
