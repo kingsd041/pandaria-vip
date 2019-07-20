@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 
 	"github.com/rancher/rancher/pkg/image"
+	"github.com/rancher/rancher/pkg/settings"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	"github.com/sirupsen/logrus"
 )
@@ -39,22 +41,30 @@ func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig,
 		os.Getenv("NETWORK_ADDONS_DIR"), string(os.PathSeparator), pluginMultusFlannel)
 
 	if _, err := os.Stat(template); err != nil {
-		logrus.Error(err)
+		logrus.Errorf("networkaddons: %v", err)
 		return err
 	}
 
 	b, err := ioutil.ReadFile(template)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("networkaddons: %v", err)
 		return err
 	}
 
 	content := applyMultusFlannelOption(string(b), cfg.Network.Options)
-	content = resolveSystemRegistry(content)
+
+	rkeRegistry := getDefaultRKERegistry(cfg.PrivateRegistries)
+	logrus.Debugf("networkaddons: got rke registry: %s", rkeRegistry)
+	if rkeRegistry != "" {
+		content = resolveRKERegistry(content, rkeRegistry)
+	} else {
+		content = resolveSystemRegistry(content)
+	}
+
 	path := fmt.Sprintf("%s.%s", template, clusterName)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("networkaddons: %v", err)
 		return err
 	}
 
@@ -80,22 +90,30 @@ func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig, c
 		os.Getenv("NETWORK_ADDONS_DIR"), string(os.PathSeparator), pluginMultusCanal)
 
 	if _, err := os.Stat(template); err != nil {
-		logrus.Error(err)
+		logrus.Errorf("networkaddons: %v", err)
 		return err
 	}
 
 	b, err := ioutil.ReadFile(template)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("networkaddons: %v", err)
 		return err
 	}
 
 	content := applyMultusCanalOption(string(b), cfg.Network.Options)
-	content = resolveSystemRegistry(content)
+
+	rkeRegistry := getDefaultRKERegistry(cfg.PrivateRegistries)
+	logrus.Debugf("networkaddons: got rke registry: %s", rkeRegistry)
+	if rkeRegistry != "" {
+		content = resolveRKERegistry(content, rkeRegistry)
+	} else {
+		content = resolveSystemRegistry(content)
+	}
+
 	path := fmt.Sprintf("%s.%s", template, clusterName)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("networkaddons: %v", err)
 		return err
 	}
 
@@ -122,13 +140,46 @@ func replaceImage(origin string) string {
 		return origin
 	}
 	newImage := "image: " + image.Resolve(strings.TrimLeft(s[1], " "))
-	logrus.Infof("origin image: %s, registry prefixed image: %s", origin, newImage)
+	logrus.Debugf("origin image: %s, registry prefixed image: %s", origin, newImage)
 	return newImage
 }
 
 // resolveSystemRegistry find all image field in yaml content
 // and replace with new image value which system registry prefixed
 func resolveSystemRegistry(content string) string {
+	if settings.SystemDefaultRegistry.Get() == "" {
+		return content
+	}
 	exp := `image:.*`
 	return regexp.MustCompile(exp).ReplaceAllStringFunc(content, replaceImage)
+}
+
+func getDefaultRKERegistry(registries []v3.PrivateRegistry) string {
+	var registry string
+	for _, reg := range registries {
+		if reg.IsDefault {
+			registry = reg.URL
+			break
+		}
+	}
+	return registry
+}
+
+// resolveRKERegistry can add rke registry prefix for the yaml content
+func resolveRKERegistry(content, registry string) string {
+	exp := `image:.*`
+	return regexp.MustCompile(exp).ReplaceAllStringFunc(content, func(origin string) string {
+		s := strings.SplitN(origin, ":", 2)
+		if len(s) != 2 {
+			return origin
+		}
+		oldImg := strings.TrimLeft(s[1], " ")
+		if !strings.HasPrefix(oldImg, registry) {
+			res := "image: " + path.Join(registry, oldImg)
+			logrus.Debugf("networkaddons: %s replaced by %s", oldImg, res)
+			return res
+		}
+
+		return origin
+	})
 }
