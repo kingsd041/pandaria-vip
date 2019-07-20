@@ -17,16 +17,16 @@ const (
 	pluginMultusCanal   = "multus-canal-macvlan"
 )
 
-func (p *Provisioner) handleNetworkPlugin(old v3.ClusterSpec) (v3.ClusterSpec, error) {
+func (p *Provisioner) handleNetworkPlugin(old v3.ClusterSpec, clusterName string) (v3.ClusterSpec, error) {
 	spec := old.DeepCopy()
 
 	if spec.RancherKubernetesEngineConfig != nil {
 		switch spec.RancherKubernetesEngineConfig.Network.Plugin {
 		case pluginMultusFlannel:
-			err := p.handleMultusFlannel(spec.RancherKubernetesEngineConfig)
+			err := p.handleMultusFlannel(spec.RancherKubernetesEngineConfig, clusterName)
 			return *spec, err
 		case pluginMultusCanal:
-			err := p.handleMultusCanal(spec.RancherKubernetesEngineConfig)
+			err := p.handleMultusCanal(spec.RancherKubernetesEngineConfig, clusterName)
 			return *spec, err
 		}
 	}
@@ -34,7 +34,7 @@ func (p *Provisioner) handleNetworkPlugin(old v3.ClusterSpec) (v3.ClusterSpec, e
 	return *spec, nil
 }
 
-func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig) error {
+func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig, clusterName string) error {
 	template := fmt.Sprintf("%s%s%s.yaml",
 		os.Getenv("NETWORK_ADDONS_DIR"), string(os.PathSeparator), pluginMultusFlannel)
 
@@ -51,7 +51,7 @@ func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig)
 
 	content := applyMultusFlannelOption(string(b), cfg.Network.Options)
 	content = resolveSystemRegistry(content)
-	path := fmt.Sprintf("%s.current", template)
+	path := fmt.Sprintf("%s.%s", template, clusterName)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
 	if err != nil {
 		logrus.Error(err)
@@ -75,7 +75,7 @@ func applyMultusFlannelOption(addons string, option map[string]string) string {
 	return addons
 }
 
-func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig) error {
+func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig, clusterName string) error {
 	template := fmt.Sprintf("%s%s%s.yaml",
 		os.Getenv("NETWORK_ADDONS_DIR"), string(os.PathSeparator), pluginMultusCanal)
 
@@ -92,7 +92,7 @@ func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig) e
 
 	content := applyMultusCanalOption(string(b), cfg.Network.Options)
 	content = resolveSystemRegistry(content)
-	path := fmt.Sprintf("%s.current", template)
+	path := fmt.Sprintf("%s.%s", template, clusterName)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
 	if err != nil {
 		logrus.Error(err)
