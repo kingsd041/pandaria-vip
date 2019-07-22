@@ -21,13 +21,13 @@ auditLog:
   maxBackup: 1
   maxSize: 100
   fluentbitImage: cnrancher/rancher-auditlog-fluentbit
-  fluentbitImageTag: v1.0.0-rc1
+  fluentbitImageTag: v1.0.0
 
 # The Mysql should be deployed manually and create the user and database schema for auditlog server.
 # You should use nonadministrative account and a high strength password to connect to the Mysql.
 auditLogServer:
   image: cnrancher/rancher-auditlog-server
-  imageTag: v1.0.0-rc9
+  imageTag: v1.0.0
   replicas: 1
   antiAffinity: preferred
   serverPort: 9000
