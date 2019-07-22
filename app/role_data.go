@@ -145,6 +145,10 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
 		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch")
 
+	rb.addRoleTemplate("View MacvlanSubnets", "macvlansubnets-view", "cluster", true, false, false, false).
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
+		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch")
+
 	rb.addRoleTemplate("Manage Cluster Catalogs", "clustercatalogs-manage", "cluster", true, false, false, true).
 		addRule().apiGroups("management.cattle.io").resources("clustercatalogs").verbs("*")
 
