@@ -201,7 +201,7 @@ spec:
           secretName: tls-ca
 {{- end }}
 {{- if gt .Values.auditLog.level 0.0 }}
-  {{- if or (eq .Values.auditLog.destination "hostPath") (eq .Values.auditLog.destination "server") }}
+  {{- if eq .Values.auditLog.destination "hostPath" }}
       - name: audit-log
         hostPath:
           path: {{ .Values.auditLog.hostPath }}
