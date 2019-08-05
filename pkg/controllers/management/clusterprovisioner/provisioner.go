@@ -662,6 +662,10 @@ func (p *Provisioner) getConfig(reconcileRKE bool, spec v3.ClusterSpec, driverNa
 		spec.RancherKubernetesEngineConfig.Nodes = nodes
 		spec.RancherKubernetesEngineConfig.SystemImages = *systemImages
 
+		spec, err = p.handleNetworkPlugin(spec, clusterName)
+		if err != nil {
+			return nil, nil, err
+		}
 		data, _ := convert.EncodeToMap(spec)
 		v, _ = data[RKEDriverKey]
 	}
