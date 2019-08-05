@@ -375,6 +375,9 @@ func DownloadEtcdSnapshotFromS3(ctx context.Context, etcdHost *hosts.Host, prsMa
 		caStr := base64.StdEncoding.EncodeToString([]byte(s3Backend.CustomCA))
 		imageCfg.Cmd = append(imageCfg.Cmd, "--s3-endpoint-ca="+caStr)
 	}
+	if s3Backend.Folder != "" {
+		imageCfg.Cmd = append(imageCfg.Cmd, "--s3-folder="+s3Backend.Folder)
+	}
 	hostCfg := &container.HostConfig{
 		Binds: []string{
 			fmt.Sprintf("%s:/backup:z", EtcdSnapshotPath),
@@ -516,7 +519,7 @@ func GetEtcdSnapshotChecksum(ctx context.Context, etcdHost *hosts.Host, prsMap m
 	imageCfg := &container.Config{
 		Cmd: []string{
 			"sh", "-c", strings.Join([]string{
-				"if [ -f ", snapshotPath, " ]; then md5sum ", snapshotPath, " | cut -f1 -d' ' | tr -d '\n'; else echo 'snapshot file does not exist' >&2; fi"}, ""),
+				" if [ -f '", snapshotPath, "' ]; then md5sum '", snapshotPath, "' | cut -f1 -d' ' | tr -d '\n'; else echo 'snapshot file does not exist' >&2; fi"}, ""),
 		},
 		Image: alpineImage,
 	}
@@ -563,6 +566,9 @@ func configS3BackupImgCmd(ctx context.Context, imageCfg *container.Config, bc *v
 		if bc.S3BackupConfig.CustomCA != "" {
 			caStr := base64.StdEncoding.EncodeToString([]byte(bc.S3BackupConfig.CustomCA))
 			cmd = append(cmd, "--s3-endpoint-ca="+caStr)
+		}
+		if bc.S3BackupConfig.Folder != "" {
+			cmd = append(cmd, "--s3-folder="+bc.S3BackupConfig.Folder)
 		}
 	}
 	imageCfg.Cmd = append(imageCfg.Cmd, cmd...)
