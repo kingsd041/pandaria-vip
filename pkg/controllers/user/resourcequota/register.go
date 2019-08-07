@@ -52,6 +52,20 @@ func Register(ctx context.Context, cluster *config.UserContext) {
 		namespaces: cluster.Core.Namespaces(""),
 	}
 	cluster.Management.Management.Projects(cluster.ClusterName).AddHandler(ctx, "namespaceResourceQuotaResetController", reset.resetNamespaceQuota)
+
+	usage := &UsageController{
+		Namespaces:          cluster.Core.Namespaces(""),
+		NamespaceLister:     cluster.Core.Namespaces("").Controller().Lister(),
+		NsIndexer:           nsInformer.GetIndexer(),
+		ResourceQuotas:      cluster.Core.ResourceQuotas(""),
+		ResourceQuotaLister: cluster.Core.ResourceQuotas("").Controller().Lister(),
+		LimitRange:          cluster.Core.LimitRanges(""),
+		LimitRangeLister:    cluster.Core.LimitRanges("").Controller().Lister(),
+		ProjectLister:       cluster.Management.Management.Projects(cluster.ClusterName).Controller().Lister(),
+		projects:            cluster.Management.Management.Projects(cluster.ClusterName),
+	}
+	cluster.Core.ResourceQuotas("").AddHandler(ctx, "resourceQuotaNamespaceUsageController", usage.syncResourceQuotaNamespaceUsage)
+	cluster.Core.Namespaces("").AddHandler(ctx, "resourceQuotaProjectUsageController", usage.syncResourceQuotaProjectUsage)
 }
 
 func nsByProjectID(obj interface{}) ([]string, error) {
