@@ -125,6 +125,17 @@ type SetPasswordInput struct {
 	NewPassword string `json:"newPassword" norman:"type=string,required"`
 }
 
+type SetHarborAuthInput struct {
+	Password string `json:"password" norman:"type=string,required"`
+	Email    string `json:"email" norman:"type=string,required"`
+}
+
+type UpdateHarborAuthInput struct {
+	OldPassword string `json:"oldPassword" norman:"type=string"`
+	NewPassword string `json:"newPassword" norman:"type=string"`
+	Email       string `json:"email" norman:"type=string"`
+}
+
 type AuthConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -139,6 +150,27 @@ type LocalConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	AuthConfig        `json:",inline" mapstructure:",squash"`
+}
+
+type SSOConfig struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	AuthConfig        `json:",inline" mapstructure:",squash"`
+
+	Hostname     string `json:"hostname,omitempty" norman:"required"`
+	TLS          bool   `json:"tls,omitempty" norman:"notnullable,default=true" norman:"required"`
+	ClientID     string `json:"clientId,omitempty" norman:"required"`
+	ClientSecret string `json:"clientSecret,omitempty" norman:"required,type=password"`
+}
+
+type SSOConfigTestOutput struct {
+	RedirectURL string `json:"redirectUrl"`
+}
+
+type SSOConfigApplyInput struct {
+	SSOConfig SSOConfig `json:"ssoConfig,omitempty"`
+	Code      string    `json:"code,omitempty"`
+	Enabled   bool      `json:"enabled,omitempty"`
 }
 
 type GithubConfig struct {

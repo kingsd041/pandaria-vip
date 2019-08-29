@@ -375,6 +375,8 @@ func authnTypes(schemas *types.Schemas) *types.Schemas {
 		MustImport(&Version, v3.SearchPrincipalsInput{}).
 		MustImport(&Version, v3.ChangePasswordInput{}).
 		MustImport(&Version, v3.SetPasswordInput{}).
+		MustImport(&Version, v3.SetHarborAuthInput{}).
+		MustImport(&Version, v3.UpdateHarborAuthInput{}).
 		MustImportAndCustomize(&Version, v3.User{}, func(schema *types.Schema) {
 			schema.ResourceActions = map[string]types.Action{
 				"setpassword": {
@@ -382,6 +384,12 @@ func authnTypes(schemas *types.Schemas) *types.Schemas {
 					Output: "user",
 				},
 				"refreshauthprovideraccess": {},
+				"setharborauth": {
+					Input: "setHarborAuthInput",
+				},
+				"updateharborauth": {
+					Input: "updateHarborAuthInput",
+				},
 			}
 			schema.CollectionActions = map[string]types.Action{
 				"changepassword": {
@@ -503,7 +511,25 @@ func authnTypes(schemas *types.Schemas) *types.Schemas {
 		MustImportAndCustomize(&Version, v3.KeyCloakConfig{}, configSchema).
 		MustImportAndCustomize(&Version, v3.OKTAConfig{}, configSchema).
 		MustImport(&Version, v3.SamlConfigTestInput{}).
-		MustImport(&Version, v3.SamlConfigTestOutput{})
+		MustImport(&Version, v3.SamlConfigTestOutput{}).
+		//SSO Config
+		MustImportAndCustomize(&Version, v3.SSOConfig{}, func(schema *types.Schema) {
+			schema.BaseType = "authConfig"
+			schema.ResourceActions = map[string]types.Action{
+				"disable": {},
+				"configureTest": {
+					Input:  "SSOConfig",
+					Output: "SSOConfigTestOutput",
+				},
+				"testAndApply": {
+					Input: "SSOConfigApplyInput",
+				},
+			}
+			schema.CollectionMethods = []string{}
+			schema.ResourceMethods = []string{http.MethodGet, http.MethodPut}
+		}).
+		MustImport(&Version, v3.SSOConfigTestOutput{}).
+		MustImport(&Version, v3.SSOConfigApplyInput{})
 }
 
 func configSchema(schema *types.Schema) {
