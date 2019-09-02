@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+
 	"github.com/rancher/types/config"
 )
 
@@ -11,5 +13,10 @@ const (
 )
 
 func syncPandariaCatalogs(management *config.ManagementContext) error {
-	return doAddCatalogs(management, pandariaLibraryName, pandariaLibraryURL, pandariaLibraryBranch)
+	desiredDefaultBranch := pandariaLibraryBranch
+
+	if fromEnvBranch := os.Getenv("PANDARIA_CATALOG_DEFAULT_BRANCH"); fromEnvBranch != "" {
+		desiredDefaultBranch = fromEnvBranch
+	}
+	return doAddCatalogs(management, pandariaLibraryName, pandariaLibraryURL, desiredDefaultBranch)
 }
