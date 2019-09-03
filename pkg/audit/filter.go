@@ -46,7 +46,8 @@ func (h auditHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	wr := &wrapWriter{ResponseWriter: rw, auditWriter: h.auditWriter, statusCode: http.StatusOK}
 	h.next.ServeHTTP(wr, req)
 
-	auditLog.write(user, req.Header, wr.Header(), wr.statusCode, wr.buf.Bytes())
+	auditLog.writeRequest(user, req.Header, nil, 0, nil)
+	auditLog.writeResponse(user, req.Header, wr.Header(), wr.statusCode, wr.buf.Bytes())
 }
 
 type wrapWriter struct {
