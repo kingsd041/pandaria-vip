@@ -38,7 +38,7 @@ func (ph *projectHandler) sync(key string, project *mgmtv3.Project) (runtime.Obj
 		return project, nil
 	}
 
-	if !mgmtv3.NamespaceBackedResource.IsTrue(project) || !mgmtv3.ProjectConditionInitialRolesPopulated.IsTrue(project) {
+	if !mgmtv3.NamespaceBackedResource.IsTrue(project) {
 		return project, nil
 	}
 
@@ -314,7 +314,7 @@ func getProjectTag(project *mgmtv3.Project, clusterName string) string {
 }
 
 func (ph *projectHandler) deployAppRoles(app *v3.App) error {
-	if app.DeletionTimestamp != nil {
+	if app == nil || app.DeletionTimestamp != nil {
 		return nil
 	}
 

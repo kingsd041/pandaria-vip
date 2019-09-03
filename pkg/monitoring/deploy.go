@@ -2,7 +2,6 @@ package monitoring
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/rancher/pkg/controllers/user/nslabels"
@@ -105,20 +104,20 @@ func DeployApp(cattleAppClient projectv3.AppInterface, projectID string, createO
 			return rtn, errors.Wrapf(err, "failed to create %q App", appName)
 		}
 	} else {
-		app = app.DeepCopy()
-		app.Spec.Answers = createOrUpdateApp.Spec.Answers
+		// app = app.DeepCopy()
+		// app.Spec.Answers = createOrUpdateApp.Spec.Answers
 
-		// clean up status
-		if forceRedeploy {
-			if app.Spec.Answers == nil {
-				app.Spec.Answers = make(map[string]string, 1)
-			}
-			app.Spec.Answers["redeployTs"] = fmt.Sprintf("%d", time.Now().Unix())
-		}
+		// // clean up status
+		// if forceRedeploy {
+		// 	if app.Spec.Answers == nil {
+		// 		app.Spec.Answers = make(map[string]string, 1)
+		// 	}
+		// 	app.Spec.Answers["redeployTs"] = fmt.Sprintf("%d", time.Now().Unix())
+		// }
 
-		if rtn, err = cattleAppClient.Update(app); err != nil {
-			return nil, errors.Wrapf(err, "failed to update %q App", appName)
-		}
+		// if rtn, err = cattleAppClient.Update(app); err != nil {
+		// 	return nil, errors.Wrapf(err, "failed to update %q App", appName)
+		// }
 	}
 
 	return rtn, nil
