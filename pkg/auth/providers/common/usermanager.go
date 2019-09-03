@@ -261,6 +261,15 @@ func (m *userManager) EnsureUser(principalName, displayName string) (*v3.User, e
 		}
 	}
 
+	if user != nil && (displayName != user.DisplayName || strings.HasSuffix(user.DisplayName, "ssologin")) {
+		user.DisplayName = displayName
+		user, err = m.users.Update(user)
+		if err != nil {
+			logrus.Error("update user err:", err.Error())
+			return nil, err
+		}
+	}
+
 	if user != nil {
 		// If the user does not have the annotation it indicates the user was created
 		// through the UI or from a previous rancher version so don't add the

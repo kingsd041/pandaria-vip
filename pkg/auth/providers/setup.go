@@ -24,6 +24,7 @@ var authConfigTypes = []string{
 	client.ADFSConfigType,
 	client.KeyCloakConfigType,
 	client.OKTAConfigType,
+	client.SSOConfigType,
 }
 
 func SetupAuthConfig(ctx context.Context, management *config.ScaledContext, schemas *types.Schemas) {

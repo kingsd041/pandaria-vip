@@ -63,6 +63,16 @@ var (
 	AuditlogServer                  = NewSetting("auditlog-server-url", "")
 	SystemGPUMonitoringCatalogID    = NewSetting("system-gpu-monitoring-catalog-id", "catalog://?catalog=pandaria&template=rancher-gpu-monitoring&version=0.0.1")
 	SystemGPUManagementCatalogID    = NewSetting("system-gpu-management-catalog-id", "catalog://?catalog=pandaria&template=rancher-gpu-management&version=0.0.1")
+
+	//SAIC settings
+
+	SaicAMHost         = NewSetting("saic-am-host", "http://user-common8080.c01.shjq-uat-a.sxc.sh")
+	SaicProductHost    = NewSetting("saic-product-host", "http://c01-product8090.c01.shjq-uat-a.sxc.sh")
+	SaicDigestHost     = NewSetting("saic-digest-host", "http://www.saicstack.com")
+	SaicServiceKeyName = NewSetting("saic-service-key-name", "k8s")
+	SaicSSOEndpoint    = NewSetting("saic-sso-endpoint", "https://saic.saicmotor.com")
+	SaicCPUQuota       = NewSetting("saic-cpu-quota", "100")
+	SaicMemoryQuota    = NewSetting("saic-memory-quota", "100Gi")
 )
 
 func init() {

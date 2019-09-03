@@ -22,6 +22,7 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/management/node"
 	"github.com/rancher/rancher/pkg/controllers/management/nodepool"
 	"github.com/rancher/rancher/pkg/controllers/management/podsecuritypolicy"
+	"github.com/rancher/rancher/pkg/controllers/management/sso"
 	"github.com/rancher/rancher/pkg/controllers/management/usercontrollers"
 	"github.com/rancher/types/config"
 )
@@ -50,6 +51,7 @@ func Register(ctx context.Context, management *config.ManagementContext, manager
 	etcdbackup.Register(ctx, management)
 	globaldns.Register(ctx, management)
 	multiclusterapp.Register(ctx, management, manager)
+	sso.Register(ctx, management)
 
 	// Register last
 	// Pandaria: add cluster manager param

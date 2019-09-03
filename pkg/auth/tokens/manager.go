@@ -133,6 +133,15 @@ func (m *Manager) createToken(k8sToken *v3.Token) (v3.Token, error) {
 		GenerateName: "token-",
 		Labels:       labels,
 	}
+
+	if k8sToken.UserPrincipal.Provider == "sso" {
+		k8sToken.ObjectMeta = metav1.ObjectMeta{
+			GenerateName: "token-",
+			Labels:       labels,
+			Annotations:  k8sToken.UserPrincipal.ExtraInfo,
+		}
+	}
+
 	createdToken, err := m.tokensClient.Create(k8sToken)
 
 	if err != nil {
@@ -634,7 +643,7 @@ var uaBackoff = wait.Backoff{
 func (m *Manager) NewLoginToken(userID string, userPrincipal v3.Principal, groupPrincipals []v3.Principal, providerToken string, ttl int64, description string) (v3.Token, error) {
 	provider := userPrincipal.Provider
 
-	if (provider == "github" || provider == "azuread") && providerToken != "" {
+	if (provider == "github" || provider == "azuread" || provider == "sso") && providerToken != "" {
 		err := m.CreateSecret(userID, provider, providerToken)
 		if err != nil {
 			return v3.Token{}, fmt.Errorf("unable to create secret: %s", err)

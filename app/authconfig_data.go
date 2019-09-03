@@ -7,6 +7,7 @@ import (
 	"github.com/rancher/rancher/pkg/auth/providers/ldap"
 	localprovider "github.com/rancher/rancher/pkg/auth/providers/local"
 	"github.com/rancher/rancher/pkg/auth/providers/saml"
+	"github.com/rancher/rancher/pkg/auth/providers/sso"
 	"github.com/rancher/rancher/pkg/namespace"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	client "github.com/rancher/types/client/management/v3"
@@ -17,6 +18,9 @@ import (
 )
 
 func addAuthConfigs(management *config.ManagementContext) error {
+	if err := addAuthConfig(sso.Name, client.SSOConfigType, false, management); err != nil {
+		return err
+	}
 	if err := addAuthConfig(github.Name, client.GithubConfigType, false, management); err != nil {
 		return err
 	}

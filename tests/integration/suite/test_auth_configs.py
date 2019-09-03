@@ -13,7 +13,7 @@ def test_auth_configs(admin_mc):
 
     configs = client.list_auth_config()
 
-    assert configs.pagination.total == 10
+    assert configs.pagination.total == 11
 
     gh = None
     local = None

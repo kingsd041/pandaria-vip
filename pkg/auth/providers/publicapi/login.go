@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/rancher/norman/httperror"
 	"github.com/rancher/norman/types"
@@ -15,6 +16,7 @@ import (
 	"github.com/rancher/rancher/pkg/auth/providers/ldap"
 	"github.com/rancher/rancher/pkg/auth/providers/local"
 	"github.com/rancher/rancher/pkg/auth/providers/saml"
+	"github.com/rancher/rancher/pkg/auth/providers/sso"
 	"github.com/rancher/rancher/pkg/auth/tokens"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	"github.com/rancher/types/apis/management.cattle.io/v3public"
@@ -146,6 +148,9 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 	case client.OKTAProviderType:
 		input = &v3public.SamlLoginInput{}
 		providerName = saml.OKTAName
+	case client.SSOProviderType:
+		input = &v3public.SSOLogin{}
+		providerName = sso.Name
 	default:
 		return v3.Token{}, "", httperror.NewAPIError(httperror.ServerError, "unknown authentication provider")
 	}
@@ -192,6 +197,12 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 	user, err := h.userMGR.EnsureUser(userPrincipal.Name, displayName)
 	if err != nil {
 		return v3.Token{}, "", err
+	}
+
+	//displayname: change from sso to c01
+	if strings.Contains(userPrincipal.DisplayName, "ssologin") {
+		userPrincipal.DisplayName = user.DisplayName
+		userPrincipal.LoginName = user.DisplayName
 	}
 
 	if user.Enabled != nil && !*user.Enabled {

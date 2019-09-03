@@ -12,6 +12,7 @@ import (
 	"github.com/rancher/rancher/pkg/auth/providers/ldap"
 	"github.com/rancher/rancher/pkg/auth/providers/local"
 	"github.com/rancher/rancher/pkg/auth/providers/saml"
+	"github.com/rancher/rancher/pkg/auth/providers/sso"
 	"github.com/rancher/rancher/pkg/auth/tokens"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	client "github.com/rancher/types/client/management/v3"
@@ -114,6 +115,13 @@ func Configure(ctx context.Context, mgmt *config.ScaledContext) {
 	providers[saml.OKTAName] = p
 	providersByType[client.OKTAConfigType] = p
 	providersByType[publicclient.OKTAProviderType] = p
+
+	p = sso.Configure(ctx, mgmt, userMGR, tokenMGR)
+	ProviderNames[sso.Name] = true
+	UnrefreshableProviders[sso.Name] = true
+	providers[sso.Name] = p
+	providersByType[client.SSOConfigType] = p
+	providersByType[publicclient.SSOProviderType] = p
 }
 
 func AuthenticateUser(input interface{}, providerName string) (v3.Principal, []v3.Principal, string, error) {
