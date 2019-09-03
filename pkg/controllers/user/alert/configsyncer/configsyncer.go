@@ -247,7 +247,7 @@ func (d *ConfigSyncer) getNotifier(id string, notifiers []*v3.Notifier) *v3.Noti
 func (d *ConfigSyncer) addProjectAlert2Operator(clusterDisplayName string, projectGroups map[string]map[string][]*v3.ProjectAlertRule, keys []string) error {
 	for _, projectName := range keys {
 		groupRules := projectGroups[projectName]
-		_, namespace := monitorutil.ProjectMonitoringInfo(projectName)
+		_, namespace := monitorutil.ClusterMonitoringInfo()
 		promRule := d.operatorCRDManager.GetDefaultPrometheusRule(namespace, projectName)
 
 		projectID := fmt.Sprintf("%s:%s", d.clusterName, projectName)
