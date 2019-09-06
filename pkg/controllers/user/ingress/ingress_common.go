@@ -18,6 +18,8 @@ import (
 
 const (
 	ingressStateAnnotation = "field.cattle.io/ingressState"
+
+	IngressRServerAnnotation = "field.cattle.io/rancher-server-ingress" // for pandaria
 )
 
 func GetStateKey(name, namespace, host string, path string, port string) string {
