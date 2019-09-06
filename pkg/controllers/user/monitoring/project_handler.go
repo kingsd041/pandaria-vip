@@ -34,7 +34,7 @@ type projectHandler struct {
 
 func (ph *projectHandler) sync(key string, project *mgmtv3.Project) (runtime.Object, error) {
 	if project == nil || project.DeletionTimestamp != nil ||
-		project.Spec.ClusterName != ph.clusterName {
+		project.Namespace != ph.clusterName {
 		return project, nil
 	}
 
