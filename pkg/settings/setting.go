@@ -66,13 +66,14 @@ var (
 
 	//SAIC settings
 
-	SaicAMHost         = NewSetting("saic-am-host", "http://user-common8080.c01.shjq-uat-a.sxc.sh")
-	SaicProductHost    = NewSetting("saic-product-host", "http://c01-product8090.c01.shjq-uat-a.sxc.sh")
-	SaicDigestHost     = NewSetting("saic-digest-host", "http://www.saicstack.com")
-	SaicServiceKeyName = NewSetting("saic-service-key-name", "k8s")
-	SaicSSOEndpoint    = NewSetting("saic-sso-endpoint", "https://saic.saicmotor.com")
-	SaicCPUQuota       = NewSetting("saic-cpu-quota", "100")
-	SaicMemoryQuota    = NewSetting("saic-memory-quota", "100Gi")
+	SaicAMHost            = NewSetting("saic-am-host", "http://user-common8080.c01.shjq-uat-a.sxc.sh")
+	SaicProductHost       = NewSetting("saic-product-host", "http://c01-product8090.c01.shjq-uat-a.sxc.sh")
+	SaicDigestHost        = NewSetting("saic-digest-host", "http://www.saicstack.com")
+	SaicServiceKeyName    = NewSetting("saic-service-key-name", "k8s")
+	SaicSSOEndpoint       = NewSetting("saic-sso-endpoint", "https://saic.saicmotor.com")
+	SaicCPUQuota          = NewSetting("saic-cpu-quota", "100")
+	SaicMemoryQuota       = NewSetting("saic-memory-quota", "100Gi")
+	SaicWorkloadQuotaList = NewSetting("saic-workload-quota-list", "{\"resources\":[{\"value\": {\"cpu\": \"100m\",\"memory\": \"256Mi\"},\"label\": \"0.1C/0.2G\",\"checked\": \"true\"},{\"value\":{\"cpu\": \"2000m\",\"memory\": \"4Gi\"},\"label\": \"2C/4G\"}]}")
 )
 
 func init() {
