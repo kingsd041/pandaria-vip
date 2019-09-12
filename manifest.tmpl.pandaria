@@ -1,0 +1,14 @@
+image: cnrancher/rancher:{{#if build.tag}}{{build.tag}}{{else}}{{replace "release/" "" build.branch }}-dev{{/if}}
+manifests:
+- image: cnrancher/rancher:{{#if build.tag}}{{build.tag}}{{else}}{{replace "release/" "" build.branch }}-dev{{/if}}-linux-amd64
+  platform:
+    architecture: amd64
+    os: linux
+- image: cnrancher/rancher:{{#if build.tag}}{{build.tag}}{{else}}{{replace "release/" "" build.branch }}-dev{{/if}}-linux-arm64
+  platform:
+    architecture: arm64
+    os: linux
+- image: cnrancher/rancher:{{#if build.tag}}{{build.tag}}{{else}}{{replace "release/" "" build.branch }}-dev{{/if}}-linux-arm
+  platform:
+    architecture: arm
+    os: linux

@@ -1,6 +1,6 @@
 ---
 kind: pipeline
-name: default-amd64
+name: default-linux-amd64
 
 platform:
   os: linux
@@ -52,7 +52,7 @@ steps:
     - push
     - tag
 
-- name: docker-publish-master
+- name: docker-publish-head
   pull: default
   image: plugins/docker
   settings:
@@ -65,7 +65,7 @@ steps:
     password:
       from_secret: docker_password
     repo: cnrancher/rancher
-    tag: v2.2-ent-dev
+    tag: v2.2-ent-dev-linux-amd64
     username:
       from_secret: docker_username
   when:
@@ -74,7 +74,7 @@ steps:
     event:
     - push
 
-- name: docker-publish-master-agent
+- name: docker-publish-head-agent
   pull: default
   image: plugins/docker
   settings:
@@ -87,7 +87,7 @@ steps:
     password:
       from_secret: docker_password
     repo: cnrancher/rancher-agent
-    tag: v2.2-ent-dev
+    tag: v2.2-ent-dev-linux-amd64
     username:
       from_secret: docker_username
   when:
@@ -109,7 +109,7 @@ steps:
     password:
       from_secret: docker_password
     repo: cnrancher/rancher
-    tag: "${DRONE_TAG}"
+    tag: "${DRONE_TAG}-linux-amd64"
     username:
       from_secret: docker_username
   when:
@@ -129,7 +129,7 @@ steps:
     password:
       from_secret: docker_password
     repo: cnrancher/rancher-agent
-    tag: "${DRONE_TAG}"
+    tag: "${DRONE_TAG}-linux-amd64"
     username:
       from_secret: docker_username
   when:
@@ -221,4 +221,213 @@ trigger:
   event:
     exclude:
     - promote
+
+---
+kind: pipeline
+name: default-linux-arm64
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+- name: build
+  image: rancher/dapper:v0.4.1
+  commands:
+  - apk add git make curl
+  - make -f Makefile.pandaria
+  privileged: true
+  volumes:
+  - name: docker
+    path: /var/run/docker.sock
+  when:
+    event:
+    - push
+    - pull_request
+    - tag
+
+- name: stage-binaries
+  image: rancher/dapper:v0.4.1
+  commands:
+  - "cp -r ./bin/* ./package/"
+  when:
+    event:
+    - push
+    - tag
+
+- name: docker-publish-head
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    - VERSION=v2.2-ent-dev
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile.pandaria
+    tag: v2.2-ent-dev-linux-arm64
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - release/v2.2-ent
+    event:
+    - push
+
+- name: docker-publish-head-agent
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    - VERSION=v2.2-ent-dev
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile_pandaria.agent
+    tag: v2.2-ent-dev-linux-arm64
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher-agent
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - release/v2.2-ent
+    event:
+    - push
+
+- name: docker-publish
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    - "VERSION=${DRONE_TAG}"
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile.pandaria
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher
+    tag: "${DRONE_TAG}-linux-arm64"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+
+- name: docker-publish-agent
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    - "VERSION=${DRONE_TAG}"
+    context: package/
+    custom_dns: 1.1.1.1
+    dockerfile: package/Dockerfile_pandaria.agent
+    password:
+      from_secret: docker_password
+    repo: cnrancher/rancher-agent
+    tag: "${DRONE_TAG}-linux-arm64"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+
+volumes:
+- name: docker
+  host:
+    path: /var/run/docker.sock
+
+trigger:
+  event:
+    exclude:
+    - promote
+
+node:
+  instance: agent-arm64
+
+---
+kind: pipeline
+name: manifest
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: push-head-manifest
+  image: plugins/manifest:1.1.0
+  settings:
+    ignore_missing: true
+    password:
+      from_secret: docker_password
+    spec: manifest.tmpl.pandaria
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - release/v2.2-ent
+    event:
+    - push
+
+- name: push-head-agent-manifest
+  image: plugins/manifest:1.1.0
+  settings:
+    ignore_missing: true
+    password:
+      from_secret: docker_password
+    spec: manifest-agent.tmpl.pandaria
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - release/v2.2-ent
+    event:
+    - push
+
+- name: push-manifest
+  image: plugins/manifest:1.1.0
+  settings:
+    ignore_missing: true
+    password:
+      from_secret: docker_password
+    spec: manifest.tmpl.pandaria
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+
+- name: push-agent-manifest
+  image: plugins/manifest:1.1.0
+  settings:
+    ignore_missing: true
+    password:
+      from_secret: docker_password
+    spec: manifest-agent.tmpl.pandaria
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+
+volumes:
+- name: docker
+  host:
+    path: /var/run/docker.sock
+
+trigger:
+  event:
+    exclude:
+    - promote
+
+node:
+  instance: agent-amd64
+
+depends_on:
+- default-linux-amd64
+- default-linux-arm64
+
 ...
