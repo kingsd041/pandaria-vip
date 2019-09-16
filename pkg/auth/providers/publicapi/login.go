@@ -33,17 +33,25 @@ func newLoginHandler(ctx context.Context, mgmt *config.ScaledContext) *loginHand
 	return &loginHandler{
 		userMGR:  mgmt.UserManager,
 		tokenMGR: tokens.NewManager(ctx, mgmt),
+		lmt:      newIPRateLimiter(),
 	}
 }
 
 type loginHandler struct {
 	userMGR  user.Manager
 	tokenMGR *tokens.Manager
+	lmt      *IPRateLimiter
 }
 
 func (h *loginHandler) login(actionName string, action *types.Action, request *types.APIContext) error {
 	if actionName != "login" {
 		return httperror.NewAPIError(httperror.ActionNotAvailable, "")
+	}
+
+	// pandaria
+	err := limitByRequest(h.lmt, request)
+	if err != nil {
+		return err
 	}
 
 	w := request.Response
