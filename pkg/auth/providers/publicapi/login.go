@@ -34,6 +34,7 @@ func newLoginHandler(ctx context.Context, mgmt *config.ScaledContext) *loginHand
 		userMGR:  mgmt.UserManager,
 		tokenMGR: tokens.NewManager(ctx, mgmt),
 		lmt:      newIPRateLimiter(),
+		amt:      newAuthLimiter(),
 	}
 }
 
@@ -41,6 +42,7 @@ type loginHandler struct {
 	userMGR  user.Manager
 	tokenMGR *tokens.Manager
 	lmt      *IPRateLimiter
+	amt      *AuthLimiter
 }
 
 func (h *loginHandler) login(actionName string, action *types.Action, request *types.APIContext) error {
@@ -49,7 +51,7 @@ func (h *loginHandler) login(actionName string, action *types.Action, request *t
 	}
 
 	// pandaria
-	err := limitByRequest(h.lmt, request)
+	err := h.lmt.LimitByRequest(request)
 	if err != nil {
 		return err
 	}
@@ -163,8 +165,21 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 		return v3.Token{}, "saml", err
 	}
 
+	// add for pandaria
+	bLogin, isLocalProvider := input.(*v3public.BasicLogin)
+	if isLocalProvider {
+		if err = h.amt.LimitByUser(bLogin.Username, request); err != nil {
+			return v3.Token{}, "", err
+		}
+	}
+
 	userPrincipal, groupPrincipals, providerToken, err = providers.AuthenticateUser(input, providerName)
 	if err != nil {
+		// add for pandaria
+		if isLocalProvider {
+			h.amt.MarkFailure(bLogin.Username, request)
+		}
+
 		return v3.Token{}, "", err
 	}
 
