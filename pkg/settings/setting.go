@@ -74,6 +74,7 @@ var (
 	SaicCPUQuota          = NewSetting("saic-cpu-quota", "100")
 	SaicMemoryQuota       = NewSetting("saic-memory-quota", "100Gi")
 	SaicWorkloadQuotaList = NewSetting("saic-workload-quota-list", "{\"resources\":[{\"value\": {\"cpu\": \"100m\",\"memory\": \"256Mi\"},\"label\": \"0.1C/0.2G\",\"checked\": \"true\"},{\"value\":{\"cpu\": \"2000m\",\"memory\": \"4Gi\"},\"label\": \"2C/4G\"}]}")
+	PortalServerURL       = NewSetting("portal-server-url", "http://portal-server:8787")
 )
 
 func init() {
