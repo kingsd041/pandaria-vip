@@ -107,8 +107,9 @@ func (al *AuthLimiter) LimitByUser(key string, request *types.APIContext) error 
 		if exist {
 			cd := t.Sub(time.Now())
 			if cd > 0 {
-				request.Response.Header().Add(responseCooldownHeader, cd.String())
-				return httperror.NewAPIError(httperror.PermissionDenied, fmt.Sprintf("You should try after %s.", cd.String()))
+				displayCD := fmt.Sprintf("%0.2fs", cd.Seconds())
+				request.Response.Header().Add(responseCooldownHeader, displayCD)
+				return httperror.NewAPIError(httperror.PermissionDenied, fmt.Sprintf("You should try after %s.", displayCD))
 			}
 			al.reset(key)
 		}
