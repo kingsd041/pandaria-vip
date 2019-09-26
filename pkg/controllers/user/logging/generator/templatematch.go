@@ -108,6 +108,9 @@ var MatchTemplate = `
 	output_include_tag  true
 	output_include_time  true
 	max_send_retries 3
+	kafka_agg_max_bytes 10485760
+	kafka_agg_max_messages 1000 
+
 	{{- if .KafkaConfig.Certificate }}        
 	ssl_ca_cert {{.CertFilePrefix}}_ca.pem
 	{{end}}

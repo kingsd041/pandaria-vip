@@ -9,7 +9,6 @@ var SourceTemplate = `
   time_format  %Y-%m-%dT%H:%M:%S.%N
   tag  {{ .RkeLogTag }}.*
   format  json
-  read_from_head  true
 </source>
 {{end}}
 
@@ -21,7 +20,6 @@ var SourceTemplate = `
   time_format  %Y-%m-%dT%H:%M:%S.%N
   tag  {{ .ContainerLogSourceTag }}.*
   format  json
-  read_from_head  true
 </source>
 {{end}}
 `
