@@ -22,4 +22,15 @@ var SourceTemplate = `
   format  json
 </source>
 {{end}}
+
+{{define "source-project-container"}}
+<source>
+  @type  tail
+  path  {{ .ContainerSourcePath}}
+  pos_file  /fluentd/log/{{ .ContainerLogPosFilename}}
+  time_format  %Y-%m-%dT%H:%M:%S
+  tag  {{ .ContainerLogSourceTag }}.*
+  format  json
+</source>
+{{end}}
 `

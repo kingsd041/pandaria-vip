@@ -169,7 +169,7 @@ func compareCustomConfigure(clusterWrap ClusterLoggingTemplateWrap, projectWrap 
 
 	projectWrap.Content = content
 	projectWrap.CurrentTarget = loggingconfig.CustomTarget
-	if err := ValidateCustomTags(projectWrap); err != nil {
+	if err := ValidateCustomTarget(projectWrap); err != nil {
 		actualErrMsg = err.Error()
 	}
 
