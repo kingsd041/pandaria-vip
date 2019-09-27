@@ -51,6 +51,10 @@ steps:
     event:
     - push
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
+        - "refs/heads/release/*saic*"
 
 - name: docker-publish-head
   pull: default
@@ -115,6 +119,9 @@ steps:
   when:
     event:
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: docker-publish-agent
   pull: default
@@ -135,6 +142,9 @@ steps:
   when:
     event:
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: publish-airgap
   pull: default
@@ -152,6 +162,9 @@ steps:
   when:
     event:
       - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: github_binary_prerelease
   image: plugins/github-release
@@ -167,8 +180,11 @@ steps:
     event:
       - tag
     ref:
-      - "refs/tags/*rc*"
-      - "refs/tags/*alpha*"
+      include:
+        - "refs/tags/*rc*"
+        - "refs/tags/*alpha*"
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: github_binary_release
   image: plugins/github-release
@@ -188,6 +204,7 @@ steps:
       exclude:
         - "refs/tags/*rc*"
         - "refs/tags/*alpha*"
+        - "refs/tags/*saic*"
 
 - name: chart-publish
   image: jacie/drone-aliyun-oss
@@ -208,6 +225,9 @@ steps:
   when:
     event:
       - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 volumes:
 - name: docker
@@ -245,6 +265,9 @@ steps:
     - push
     - pull_request
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: stage-binaries
   image: rancher/dapper:v0.4.1
@@ -254,6 +277,9 @@ steps:
     event:
     - push
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: docker-publish-head
   image: plugins/docker
@@ -315,6 +341,9 @@ steps:
   when:
     event:
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: docker-publish-agent
   image: plugins/docker
@@ -334,6 +363,9 @@ steps:
   when:
     event:
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 volumes:
 - name: docker
@@ -341,6 +373,10 @@ volumes:
     path: /var/run/docker.sock
 
 trigger:
+  ref:
+    exclude:
+      - "refs/heads/release/*saic*"
+      - "refs/tags/*saic*"
   event:
     exclude:
     - promote
@@ -399,6 +435,9 @@ steps:
   when:
     event:
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 - name: push-agent-manifest
   image: plugins/manifest:1.1.0
@@ -412,6 +451,9 @@ steps:
   when:
     event:
     - tag
+    ref:
+      exclude:
+        - "refs/tags/*saic*"
 
 volumes:
 - name: docker
@@ -419,6 +461,10 @@ volumes:
     path: /var/run/docker.sock
 
 trigger:
+  ref:
+    exclude:
+      - "refs/heads/release/*saic*"
+      - "refs/tags/*saic*"
   event:
     exclude:
     - promote
