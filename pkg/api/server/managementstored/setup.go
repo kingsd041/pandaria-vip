@@ -7,6 +7,7 @@ import (
 	"github.com/rancher/norman/store/crd"
 	"github.com/rancher/norman/store/proxy"
 	"github.com/rancher/norman/store/subtype"
+	"github.com/rancher/norman/store/transform"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/rancher/pkg/api/customization/alert"
 	"github.com/rancher/rancher/pkg/api/customization/app"
@@ -35,17 +36,20 @@ import (
 	"github.com/rancher/rancher/pkg/api/store/cert"
 	"github.com/rancher/rancher/pkg/api/store/cluster"
 	globaldnsAPIStore "github.com/rancher/rancher/pkg/api/store/globaldns"
+	grbstore "github.com/rancher/rancher/pkg/api/store/globalrolebindings"
 	nodeStore "github.com/rancher/rancher/pkg/api/store/node"
 	nodeTemplateStore "github.com/rancher/rancher/pkg/api/store/nodetemplate"
 	"github.com/rancher/rancher/pkg/api/store/noopwatching"
 	passwordStore "github.com/rancher/rancher/pkg/api/store/password"
 	"github.com/rancher/rancher/pkg/api/store/preference"
+	rtStore "github.com/rancher/rancher/pkg/api/store/roletemplate"
 	"github.com/rancher/rancher/pkg/api/store/scoped"
 	settingstore "github.com/rancher/rancher/pkg/api/store/setting"
 	"github.com/rancher/rancher/pkg/api/store/userscope"
 	"github.com/rancher/rancher/pkg/auth/principals"
 	"github.com/rancher/rancher/pkg/auth/providerrefresh"
 	"github.com/rancher/rancher/pkg/auth/providers"
+	"github.com/rancher/rancher/pkg/auth/tokens"
 	"github.com/rancher/rancher/pkg/clustermanager"
 	"github.com/rancher/rancher/pkg/controllers/management/compose/common"
 	"github.com/rancher/rancher/pkg/namespace"
@@ -145,6 +149,7 @@ func Setup(ctx context.Context, apiContext *config.ScaledContext, clusterManager
 	Setting(schemas)
 	Preference(schemas, apiContext)
 	ClusterRegistrationTokens(schemas)
+	Tokens(ctx, schemas, apiContext)
 	NodeTemplates(schemas, apiContext)
 	LoggingTypes(schemas, apiContext, clusterManager, k8sProxy)
 	Alert(schemas, apiContext)
@@ -153,6 +158,7 @@ func Setup(ctx context.Context, apiContext *config.ScaledContext, clusterManager
 	ProjectRoleTemplateBinding(schemas, apiContext)
 	TemplateContent(schemas)
 	PodSecurityPolicyTemplate(schemas, apiContext)
+	GlobalRoleBindings(schemas, apiContext)
 	RoleTemplate(schemas, apiContext)
 	MultiClusterApps(schemas, apiContext)
 	GlobalDNSs(schemas, apiContext, localClusterEnabled)
@@ -326,6 +332,16 @@ func ClusterRegistrationTokens(schemas *types.Schemas) {
 		Store: schema.Store,
 	}
 	schema.Formatter = clusterregistrationtokens.Formatter
+}
+
+func Tokens(ctx context.Context, schemas *types.Schemas, mgmt *config.ScaledContext) {
+	schema := schemas.Schema(&managementschema.Version, client.TokenType)
+	manager := tokens.NewManager(ctx, mgmt)
+
+	schema.Store = &transform.Store{
+		Store:             schema.Store,
+		StreamTransformer: manager.TokenStreamTransformer,
+	}
 }
 
 func NodeTemplates(schemas *types.Schemas, management *config.ScaledContext) {
@@ -600,12 +616,18 @@ func ProjectRoleTemplateBinding(schemas *types.Schemas, management *config.Scale
 	schema.Validator = roletemplatebinding.NewPRTBValidator(management)
 }
 
+func GlobalRoleBindings(schemas *types.Schemas, management *config.ScaledContext) {
+	schema := schemas.Schema(&managementschema.Version, client.GlobalRoleBindingType)
+	schema.Store = grbstore.Wrap(schema.Store, management.Management.GlobalRoleBindings("").Controller().Lister())
+}
+
 func RoleTemplate(schemas *types.Schemas, management *config.ScaledContext) {
 	rt := roletemplate.Wrapper{
 		RoleTemplateLister: management.Management.RoleTemplates("").Controller().Lister(),
 	}
 	schema := schemas.Schema(&managementschema.Version, client.RoleTemplateType)
 	schema.Validator = rt.Validator
+	schema.Store = rtStore.Wrap(schema.Store, management.Management.RoleTemplates("").Controller().Lister())
 }
 
 func KontainerDriver(schemas *types.Schemas, management *config.ScaledContext) {
