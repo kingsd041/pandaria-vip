@@ -176,7 +176,8 @@ func Setup(ctx context.Context, apiContext *config.ScaledContext, clusterManager
 	authn.SetRTBStore(ctx, schemas.Schema(&managementschema.Version, client.ClusterRoleTemplateBindingType), apiContext)
 	authn.SetRTBStore(ctx, schemas.Schema(&managementschema.Version, client.ProjectRoleTemplateBindingType), apiContext)
 	nodeStore.SetupStore(schemas.Schema(&managementschema.Version, client.NodeType))
-	projectStore.SetProjectStore(schemas.Schema(&managementschema.Version, client.ProjectType), apiContext)
+	//projectStore.SetProjectStore(schemas.Schema(&managementschema.Version, client.ProjectType), apiContext)
+	projectStore.SetSAICProjectStore(schemas.Schema(&managementschema.Version, client.ProjectType), apiContext) // SAIC
 	setupScopedTypes(schemas)
 	setupPasswordTypes(ctx, schemas, apiContext)
 	multiclusterapp.SetMemberStore(ctx, schemas.Schema(&managementschema.Version, client.MultiClusterAppType), apiContext)

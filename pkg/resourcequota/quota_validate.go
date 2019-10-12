@@ -87,3 +87,43 @@ func prettyPrint(item api.ResourceList) string {
 	}
 	return strings.Join(parts, ",")
 }
+
+func IsProjectQuotaFitCluster(projectLimit *v3.ResourceQuotaLimit, clusterLimit *v3.ResourceQuotaLimit) (bool, string, error) {
+	psResourceList := api.ResourceList{}
+	pResourceList, err := ConvertLimitToResourceList(projectLimit)
+	if err != nil {
+		return false, "", err
+	}
+	psResourceList = quota.Add(psResourceList, pResourceList)
+
+	clusterResourceList, err := ConvertLimitToResourceList(clusterLimit)
+	if err != nil {
+		return false, "", err
+	}
+
+	allowed, exceeded := QuotaLessThanOrEqual(psResourceList, clusterResourceList)
+	if allowed {
+		return true, "", nil
+	}
+	failedHard := quota.Mask(psResourceList, exceeded)
+	return false, prettyPrint(failedHard), nil
+}
+
+// QuotaLessThanOrEqual returns true if a < b for each key in b
+// If false, it returns the keys in a that exceeded b
+func QuotaLessThanOrEqual(a api.ResourceList, b api.ResourceList) (bool, []api.ResourceName) {
+	result := true
+	resourceNames := []api.ResourceName{}
+	for key, value := range b {
+		if value.IsZero() {
+			continue
+		}
+		if other, found := a[key]; found {
+			if other.Cmp(value) > 0 {
+				result = false
+				resourceNames = append(resourceNames, key)
+			}
+		}
+	}
+	return result, resourceNames
+}

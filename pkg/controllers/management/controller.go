@@ -39,7 +39,8 @@ func Register(ctx context.Context, management *config.ManagementContext, manager
 	clusterdeploy.Register(ctx, management, manager)
 	clustergc.Register(ctx, management)
 	clusterprovisioner.Register(ctx, management)
-	clusterstats.Register(ctx, management, manager)
+	//clusterstats.Register(ctx, management, manager)
+	clusterstats.SAICRegister(ctx, management, manager) // SAIC
 	clusterstatus.Register(ctx, management)
 	compose.Register(ctx, management, manager)
 	kontainerdriver.Register(ctx, management)

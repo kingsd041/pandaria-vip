@@ -66,15 +66,24 @@ var (
 
 	//SAIC settings
 
-	SaicAMHost            = NewSetting("saic-am-host", "http://user-common8080.c01.shjq-uat-a.sxc.sh")
-	SaicProductHost       = NewSetting("saic-product-host", "http://c01-product8090.c01.shjq-uat-a.sxc.sh")
-	SaicDigestHost        = NewSetting("saic-digest-host", "http://www.saicstack.com")
-	SaicServiceKeyName    = NewSetting("saic-service-key-name", "k8s")
-	SaicSSOEndpoint       = NewSetting("saic-sso-endpoint", "https://saic.saicmotor.com")
-	SaicCPUQuota          = NewSetting("saic-cpu-quota", "100")
-	SaicMemoryQuota       = NewSetting("saic-memory-quota", "100Gi")
-	SaicWorkloadQuotaList = NewSetting("saic-workload-quota-list", "{\"resources\":[{\"value\": {\"cpu\": \"100m\",\"memory\": \"256Mi\"},\"label\": \"0.1C/0.2G\",\"checked\": \"true\"},{\"value\":{\"cpu\": \"2000m\",\"memory\": \"4Gi\"},\"label\": \"2C/4G\"}]}")
-	PortalServerURL       = NewSetting("portal-server-url", "http://portal-server:8787")
+	SaicAMHost                     = NewSetting("saic-am-host", "http://user-common8080.c01.shjq-uat-a.sxc.sh")
+	SaicProductHost                = NewSetting("saic-product-host", "http://c01-product8090.c01.shjq-uat-a.sxc.sh")
+	SaicDigestHost                 = NewSetting("saic-digest-host", "http://www.saicstack.com")
+	SaicServiceKeyName             = NewSetting("saic-service-key-name", "k8s")
+	SaicSSOEndpoint                = NewSetting("saic-sso-endpoint", "https://saic.saicmotor.com")
+	SaicCPUQuota                   = NewSetting("saic-cpu-quota", "100")
+	SaicMemoryQuota                = NewSetting("saic-memory-quota", "100Gi")
+	SaicWorkloadQuotaList          = NewSetting("saic-workload-quota-list", "{\"resources\":[{\"value\": {\"cpu\": \"100m\",\"memory\": \"256Mi\"},\"label\": \"0.1C/0.2G\",\"checked\": \"true\"},{\"value\":{\"cpu\": \"2000m\",\"memory\": \"4Gi\"},\"label\": \"2C/4G\"}]}")
+	PortalServerURL                = NewSetting("portal-server-url", "http://portal-server:8787")
+	SaicServiceQuota               = NewSetting("saic-service-quota", "")
+	SaicSecretQuota                = NewSetting("saic-secret-quota", "")
+	SaicStorageQuota               = NewSetting("saic-storage-quota", "")
+	SaicConfigMapQuota             = NewSetting("saic-configmap-quota", "")
+	SaicNodePortQuota              = NewSetting("saic-nodeport-quota", "")
+	SaicAllocatedPortQuota         = NewSetting("saic-allocatedport-quota", "")
+	SaicLoadBalancerQuota          = NewSetting("saic-loadbalancer-quota", "")
+	SaicPersistentVolumeClaimQuota = NewSetting("saic-persistentvolumeclaims-quota", "")
+	SaicReplicationControllerQuota = NewSetting("saic-replicationcontrollers-quota", "")
 )
 
 func init() {

@@ -130,6 +130,7 @@ var resourceQuotaConversion = map[string]string{
 	"persistentVolumeClaims": "persistentvolumeclaims",
 	"servicesNodePorts":      "services.nodeports",
 	"servicesLoadBalancers":  "services.loadbalancers",
+	"servicesAllocatedPorts": "services.allocatedports", // SAIC
 	"requestsCpu":            "requests.cpu",
 	"requestsMemory":         "requests.memory",
 	"requestsStorage":        "requests.storage",
