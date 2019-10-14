@@ -29,6 +29,8 @@ type WorkloadEndpointsController struct {
 	nodeLister         v1.NodeLister
 	clusterName        string
 	isRKE              bool
+	//SAIC: Add cluster lister to get export-ip of cluster
+	clusterLister managementv3.ClusterLister
 }
 
 func (c *WorkloadEndpointsController) UpdateEndpoints(key string, obj *workloadutil.Workload) error {
@@ -159,6 +161,22 @@ func (c *WorkloadEndpointsController) UpdateEndpoints(key string, obj *workloadu
 			}
 			newPublicEps = append(newPublicEps, eps...)
 		}
+
+		// 3. SAIC: get endpoints from ingress port pods matching the annotation
+		cluster, err := c.clusterLister.Get("", c.clusterName)
+		if err != nil {
+			return err
+		}
+		var exportIP string
+		if val, ok := cluster.Labels["export-ip"]; ok {
+			exportIP = val
+		}
+		eps, err := c.convertIngressPortToEndpoint(w, exportIP)
+		if err != nil {
+			return err
+		}
+		newPublicEps = append(newPublicEps, eps...)
+		// SAIC: end
 
 		existingPublicEps := getPublicEndpointsFromAnnotations(w.Annotations)
 		if areEqualEndpoints(existingPublicEps, newPublicEps) {

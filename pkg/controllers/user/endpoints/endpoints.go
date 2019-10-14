@@ -67,6 +67,8 @@ func Register(ctx context.Context, workload *config.UserContext) {
 		nodeLister:     workload.Core.Nodes("").Controller().Lister(),
 		clusterName:    workload.ClusterName,
 		isRKE:          isRKE,
+		// SAIC: Add cluster lister
+		clusterLister: workload.Management.Management.Clusters("").Controller().Lister(),
 	}
 	w.WorkloadController = workloadUtil.NewWorkloadController(ctx, workload.UserOnlyContext(), w.UpdateEndpoints)
 
