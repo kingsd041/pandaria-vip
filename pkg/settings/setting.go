@@ -84,6 +84,8 @@ var (
 	SaicLoadBalancerQuota          = NewSetting("saic-loadbalancer-quota", "")
 	SaicPersistentVolumeClaimQuota = NewSetting("saic-persistentvolumeclaims-quota", "")
 	SaicReplicationControllerQuota = NewSetting("saic-replicationcontrollers-quota", "")
+	SaicBaseDomain                 = NewSetting("saic-base-domain", "sxc.sh")
+	SaicBaseHost                   = NewSetting("saic-base-host", "http://www.qa.sxc.sh")
 )
 
 func init() {

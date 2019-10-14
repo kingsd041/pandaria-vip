@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	v1 "github.com/rancher/types/apis/core/v1"
+	v1beta1 "github.com/rancher/types/apis/extensions/v1beta1"
 	"github.com/rancher/types/config"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -31,12 +32,18 @@ type Controller struct {
 	workloadController CommonController
 	serviceLister      v1.ServiceLister
 	services           v1.ServiceInterface
+	// SAIC: create ingress for workload which has Http port kind
+	ingressLister v1beta1.IngressLister
+	ingresses     v1beta1.IngressInterface
 }
 
 func Register(ctx context.Context, workload *config.UserOnlyContext) {
 	c := &Controller{
 		serviceLister: workload.Core.Services("").Controller().Lister(),
 		services:      workload.Core.Services(""),
+		// SAIC: create ingress for workload which has Http port kind
+		ingressLister: workload.Extensions.Ingresses("").Controller().Lister(),
+		ingresses:     workload.Extensions.Ingresses(""),
 	}
 	c.workloadController = NewWorkloadController(ctx, workload, c.CreateService)
 }
@@ -175,7 +182,8 @@ func (c *Controller) CreateServiceForWorkload(workload *Workload) error {
 		}
 	}
 
-	return nil
+	// SAIC: create ingress for workload which has Http port kind
+	return c.CreateIngressForWorkload(workload)
 }
 
 func (c *Controller) updateService(toUpdate Service, existing *corev1.Service) error {
