@@ -58,7 +58,7 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 	podsecuritypolicy.RegisterNamespace(ctx, cluster)
 	podsecuritypolicy.RegisterServiceAccount(ctx, cluster)
 	podsecuritypolicy.RegisterTemplate(ctx, cluster)
-	secret.Register(ctx, cluster)
+	//secret.Register(ctx, cluster)
 	systemimage.Register(ctx, cluster)
 	endpoints.Register(ctx, cluster)
 	approuter.Register(ctx, cluster)
@@ -69,6 +69,7 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 	harbor.Register(ctx, cluster)
 	certsexpiration.Register(ctx, cluster)
 	ingresshostgen.Register(ctx, cluster.UserOnlyContext())
+	secret.RegisterPandaria(ctx, cluster) // for pandaria
 
 	if clusterRec.Spec.LocalClusterAuthEndpoint.Enabled {
 		err := clusterauthtoken.CRDSetup(ctx, cluster.UserOnlyContext())

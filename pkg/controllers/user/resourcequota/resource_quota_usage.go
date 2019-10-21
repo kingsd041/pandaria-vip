@@ -46,7 +46,7 @@ func (c *UsageController) syncResourceQuotaNamespaceUsage(key string, rq *corev1
 }
 
 func (c *UsageController) syncResourceQuotaProjectUsage(key string, ns *corev1.Namespace) (runtime.Object, error) {
-	if ns == nil || ns.DeletionTimestamp != nil {
+	if ns == nil {
 		return nil, nil
 	}
 
@@ -88,6 +88,10 @@ func (c *UsageController) syncProjectUsage(ns *corev1.Namespace) error {
 
 	for _, obj := range namespaces {
 		n := obj.(*corev1.Namespace)
+
+		if n.DeletionTimestamp != nil {
+			continue
+		}
 
 		// skip itself
 		if projectNamespace == n.Name {
