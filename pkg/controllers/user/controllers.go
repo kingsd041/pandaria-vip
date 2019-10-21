@@ -15,6 +15,7 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/user/endpoints"
 	"github.com/rancher/rancher/pkg/controllers/user/externalservice"
 	"github.com/rancher/rancher/pkg/controllers/user/globaldns"
+	"github.com/rancher/rancher/pkg/controllers/user/gpu"
 	"github.com/rancher/rancher/pkg/controllers/user/healthsyncer"
 	"github.com/rancher/rancher/pkg/controllers/user/helm"
 	"github.com/rancher/rancher/pkg/controllers/user/ingress"
@@ -70,6 +71,7 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 	certsexpiration.Register(ctx, cluster)
 	ingresshostgen.Register(ctx, cluster.UserOnlyContext())
 	secret.RegisterPandaria(ctx, cluster) // for pandaria
+	gpu.Register(ctx, cluster)            // for pandaria gpu management
 
 	if clusterRec.Spec.LocalClusterAuthEndpoint.Enabled {
 		err := clusterauthtoken.CRDSetup(ctx, cluster.UserOnlyContext())

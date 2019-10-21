@@ -61,6 +61,8 @@ var (
 	HarborServerURL                 = NewSetting("harbor-server-url", "")
 	HarborAdminAuth                 = NewSetting("harbor-admin-auth", "")
 	AuditlogServer                  = NewSetting("auditlog-server-url", "")
+	SystemGPUMonitoringCatalogID    = NewSetting("system-gpu-monitoring-catalog-id", "catalog://?catalog=pandaria&template=rancher-gpu-monitoring&version=0.0.1")
+	SystemGPUManagementCatalogID    = NewSetting("system-gpu-management-catalog-id", "catalog://?catalog=pandaria&template=rancher-gpu-management&version=0.0.1")
 )
 
 func init() {
