@@ -87,7 +87,7 @@ VOLUME /var/lib/rancher
 ENV NETWORK_ADDONS_DIR /var/lib/pandaria/network-addons
 ENV FLANNEL_MACVLAN_NETWORK_ADDON_NAME multus-flannel-macvlan
 ENV CANAL_MACVLAN_NETWORK_ADDON_NAME multus-canal-macvlan
-ENV MACVLAN_NETWORK_ADDON_VERSION=v0.3.19
+ENV MACVLAN_NETWORK_ADDON_VERSION=v0.3.22
 ENV FLANNEL_MACVLAN_NETWORK_ADDON_URL https://pandaria-release.s3-ap-northeast-1.amazonaws.com/network-controller/${MACVLAN_NETWORK_ADDON_VERSION}/${FLANNEL_MACVLAN_NETWORK_ADDON_NAME}.yaml
 ENV CANAL_MACVLAN_NETWORK_ADDON_URL https://pandaria-release.s3-ap-northeast-1.amazonaws.com/network-controller/${MACVLAN_NETWORK_ADDON_VERSION}/${CANAL_MACVLAN_NETWORK_ADDON_NAME}.yaml
 RUN mkdir -p ${NETWORK_ADDONS_DIR} && \
