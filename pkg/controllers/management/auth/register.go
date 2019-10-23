@@ -33,8 +33,12 @@ func RegisterEarly(ctx context.Context, management *config.ManagementContext, cl
 	management.Management.RoleTemplates("").AddHandler(ctx, "legacy-rt-cleaner", rtLegacy.sync)
 }
 
-func RegisterLate(ctx context.Context, management *config.ManagementContext) {
+func RegisterLate(ctx context.Context, management *config.ManagementContext, clusterManager *clustermanager.Manager) {
 	p, c := newPandCLifecycles(management)
 	management.Management.Projects("").AddLifecycle(ctx, projectRemoveController, p)
 	management.Management.Clusters("").AddLifecycle(ctx, clusterRemoveController, c)
+
+	// Pandaria: macvlan subnet cleaner
+	macvlanCleaner := newProjectMacvlansubnetCleaner(management, clusterManager)
+	management.Management.Projects("").AddLifecycle(ctx, mgmtProjectMacvlansubnetCleaner, macvlanCleaner)
 }

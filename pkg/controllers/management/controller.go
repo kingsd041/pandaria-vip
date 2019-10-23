@@ -52,5 +52,6 @@ func Register(ctx context.Context, management *config.ManagementContext, manager
 	multiclusterapp.Register(ctx, management, manager)
 
 	// Register last
-	auth.RegisterLate(ctx, management)
+	// Pandaria: add cluster manager param
+	auth.RegisterLate(ctx, management, manager)
 }
