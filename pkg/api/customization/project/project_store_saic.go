@@ -3,9 +3,6 @@ package project
 import (
 	"encoding/json"
 	"fmt"
-	"math"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -16,22 +13,16 @@ import (
 	"github.com/rancher/norman/types/values"
 	"github.com/rancher/rancher/pkg/clustermanager"
 	"github.com/rancher/rancher/pkg/resourcequota"
-	validate "github.com/rancher/rancher/pkg/resourcequota"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	mgmtschema "github.com/rancher/types/apis/management.cattle.io/v3/schema"
 	mgmtclient "github.com/rancher/types/client/management/v3"
 	"github.com/rancher/types/config"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	api "k8s.io/kubernetes/pkg/apis/core"
-	"k8s.io/kubernetes/pkg/quota"
 )
 
 const clusterIDField = "clusterId"
 const clusterAllocatableField = "clusterAllocatable"
-const clusterQuotaCPUExceedLabel = "request-cpu"
-const clusterQuotaMemoryExceedLabel = "request-memory"
 
 type projectSAICStore struct {
 	types.Store
@@ -294,103 +285,13 @@ func (s *projectSAICStore) isQuotaFit(apiContext *types.APIContext, nsQuotaLimit
 		return err
 	}
 
-	clusterAllocatable := cluster.Status.Allocatable.DeepCopy()
-	allocatableConverted, err := convert.EncodeToMap(clusterAllocatable)
-	if err != nil {
-		return err
-	}
-
-	allocatableConvertedMap := map[string]string{}
-	for key, value := range allocatableConverted {
-		var resourceName string
-		if val, ok := resourceQuotaConversion[key]; ok {
-			resourceName = val
-		} else {
-			resourceName = key
-		}
-		allocatableConvertedMap[resourceName] = convert.ToString(value)
-	}
-
-	clusterLimit := &v3.ResourceQuotaLimit{}
-	if err := convert.ToObj(allocatableConvertedMap, clusterLimit); err != nil {
-		return err
-	}
-
 	// aggregate project's quota limit which below to the cluster
 	projects, err := s.projectLister.List(cluster.Name, labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	var cpuExceed float64
-	var memoryExceed float64
-	if val, ok := cluster.Labels[clusterQuotaCPUExceedLabel]; ok {
-		val64, err := strconv.ParseFloat(val, 64)
-		if err != nil {
-			return err
-		}
-		cpuExceed = val64
-	}
-	if val, ok := cluster.Labels[clusterQuotaMemoryExceedLabel]; ok {
-		val64, err := strconv.ParseFloat(val, 64)
-		if err != nil {
-			return err
-		}
-		memoryExceed = val64
-	}
-
-	psResourceList := api.ResourceList{}
-	for _, p := range projects {
-		if p.Spec.ResourceQuota != nil {
-			if id == fmt.Sprintf("%s:%s", p.Namespace, p.Name) {
-				continue
-			}
-			deepCopy := p.Spec.ResourceQuota.Limit.DeepCopy()
-			if deepCopy != nil {
-				pConverted, err := convert.EncodeToMap(deepCopy)
-				if err != nil {
-					return err
-				}
-				pConvertedMap := map[string]string{}
-				for key, value := range pConverted {
-					pConvertedMap[key] = convert.ToString(value)
-				}
-				pLimit := &v3.ResourceQuotaLimit{}
-				if err := convert.ToObj(pConvertedMap, pLimit); err != nil {
-					return err
-				}
-				pLimitList, err := validate.ConvertLimitToResourceList(pLimit)
-				if err != nil {
-					return err
-				}
-				psResourceList = quota.Add(psResourceList, pLimitList)
-			}
-		}
-	}
-
-	currentProjectResourceList, err := validate.ConvertLimitToResourceList(projectQuotaLimit)
-	if err != nil {
-		return err
-	}
-
-	psResourceList = quota.Add(psResourceList, currentProjectResourceList)
-
-	aggregatePLimit, err := convertResourceListToLimit(psResourceList)
-	if err != nil {
-		return err
-	}
-
-	aggregatePList, err := convertLimitToResourceList(aggregatePLimit, cpuExceed, memoryExceed)
-	if err != nil {
-		return err
-	}
-
-	aggregatePLimit, err = convertResourceListToLimit(aggregatePList)
-	if err != nil {
-		return err
-	}
-
-	isFit, msg, err = resourcequota.IsProjectQuotaFitCluster(aggregatePLimit, clusterLimit)
+	isFit, msg, err = resourcequota.IsProjectQuotaFitCluster(projects, cluster, id, projectQuotaLimit)
 	if err != nil {
 		return err
 	}
@@ -432,96 +333,4 @@ func (s *projectSAICStore) getNamespacesCount(apiContext *types.APIContext, proj
 	}
 
 	return count, nil
-}
-
-func convertResourceListToLimit(rList api.ResourceList) (*v3.ResourceQuotaLimit, error) {
-	converted, err := convert.EncodeToMap(rList)
-	if err != nil {
-		return nil, err
-	}
-
-	convertedMap := map[string]string{}
-	for key, value := range converted {
-		convertedMap[key] = convert.ToString(value)
-	}
-
-	toReturn := &v3.ResourceQuotaLimit{}
-	err = convert.ToObj(convertedMap, toReturn)
-
-	return toReturn, err
-}
-
-var resourceQuotaConversion = map[string]string{
-	"replicationcontrollers":  "replicationControllers",
-	"configmaps":              "configMaps",
-	"persistentvolumeclaims":  "persistentVolumeClaims",
-	"services.nodeports":      "servicesNodePorts",
-	"services.loadbalancers":  "servicesLoadBalancers",
-	"services.allocatedports": "servicesAllocatedPorts",
-	"storage":                 "requestsStorage",
-	"cpu":                     "limitsCpu",
-	"memory":                  "limitsMemory",
-}
-
-func convertMemoryQuota(memoryValue string) (float64, string, error) {
-	unitList := []string{"K", "M", "G", "T", "P", "E"}
-	iUnitList := []string{"Ki", "Mi", "Gi", "Ti", "Pi", "Ei"}
-
-	reg := "([^0-9])([a-zA-Z]+)?"
-	quotaReg := regexp.MustCompile(reg)
-	units := quotaReg.FindAllString(memoryValue, -1)
-	if len(units) == 0 {
-		return 0, "", nil
-	}
-
-	for index, unit := range unitList {
-		if units[0] == unit {
-			return math.Pow(1000, float64(index+1)), units[0], nil
-		}
-	}
-
-	for index, iUnit := range iUnitList {
-		if units[0] == iUnit {
-			return math.Pow(1024, float64(index+1)), units[0], nil
-		}
-	}
-
-	return 0, "", fmt.Errorf("Got unexpected memory quota %v", memoryValue)
-}
-
-func convertLimitToResourceList(limit *v3.ResourceQuotaLimit, cpuExceed, memoryExceed float64) (api.ResourceList, error) {
-	toReturn := api.ResourceList{}
-	converted, err := convert.EncodeToMap(limit)
-	if err != nil {
-		return nil, err
-	}
-	for key, value := range converted {
-		q, err := resource.ParseQuantity(convert.ToString(value))
-		if err != nil {
-			return nil, err
-		}
-		if key == "limitsCpu" && cpuExceed > 0 {
-			val64 := cpuExceed * float64(q.MilliValue())
-			q, err = resource.ParseQuantity(fmt.Sprintf("%vm", val64))
-			if err != nil {
-				return nil, err
-			}
-		}
-		if key == "limitsMemory" && memoryExceed > 0 {
-			baseValue, unit, err := convertMemoryQuota(q.String())
-			if err != nil {
-				return nil, err
-			}
-			val64 := memoryExceed * float64(q.Value())
-			if baseValue != 0 {
-				val64 = val64 / baseValue
-			}
-			q, err = resource.ParseQuantity(fmt.Sprintf("%v%s", val64, unit))
-			if err != nil {
-				return nil, err
-			}
-		}
-		toReturn[api.ResourceName(key)] = q
-	}
-	return toReturn, nil
 }

@@ -323,6 +323,35 @@ func (c *SyncController) validateAndSetNamespaceQuota(ns *corev1.Namespace, quot
 		if updatedNs.Annotations == nil {
 			updatedNs.Annotations = map[string]string{}
 		}
+
+		nsQuota := &v3.NamespaceResourceQuota{}
+		err := json.Unmarshal([]byte(quotaToUpdate), nsQuota)
+		if err != nil {
+			return false, updatedNs, err
+		}
+
+		nsQuotaLimitMap, err := convert.EncodeToMap(nsQuota.Limit)
+		if err != nil {
+			return false, updatedNs, err
+		}
+
+		delete(nsQuotaLimitMap, "servicesAllocatedPorts")
+
+		nsQuotaLimit := &v3.ResourceQuotaLimit{}
+		err = convert.ToObj(nsQuotaLimitMap, nsQuotaLimit)
+		if err != nil {
+			return false, updatedNs, err
+		}
+
+		nsQuota.Limit = *nsQuotaLimit
+
+		bytes, err := json.Marshal(nsQuota)
+		if err != nil {
+			return false, updatedNs, err
+		}
+
+		quotaToUpdate = string(bytes)
+
 		updatedNs.Annotations[resourceQuotaAnnotation] = quotaToUpdate
 		updatedNs, err = c.Namespaces.Update(updatedNs)
 		if err != nil {
@@ -471,6 +500,9 @@ func completeQuota(existingQuota *v3.NamespaceResourceQuota, defaultQuota *v3.Na
 			newLimitMap[key] = value
 		}
 	}
+
+	// SAIC
+	delete(newLimitMap, "servicesAllocatedPorts")
 
 	if reflect.DeepEqual(existingLimitMap, newLimitMap) {
 		return nil, nil

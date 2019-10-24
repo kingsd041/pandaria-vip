@@ -44,7 +44,8 @@ func Setup(ctx context.Context, mgmt *config.ScaledContext, clusterManager *clus
 	addProxyStore(ctx, schemas, mgmt, client.ReplicationControllerType, "v1", workload.NewCustomizeStore)
 	addProxyStore(ctx, schemas, mgmt, client.ServiceType, "v1", service.New)
 	addProxyStore(ctx, schemas, mgmt, client.StatefulSetType, "apps/v1beta2", workload.NewCustomizeStore)
-	addProxyStore(ctx, schemas, mgmt, clusterClient.NamespaceType, "v1", namespace.New)
+	//addProxyStore(ctx, schemas, mgmt, clusterClient.NamespaceType, "v1", namespace.New)
+	addProxyStore(ctx, schemas, mgmt, clusterClient.NamespaceType, "v1", namespace.NewSAIC) // SAIC
 	addProxyStore(ctx, schemas, mgmt, clusterClient.PersistentVolumeType, "v1", nil)
 	addProxyStore(ctx, schemas, mgmt, clusterClient.StorageClassType, "storage.k8s.io/v1", nil)
 	addProxyStore(ctx, schemas, mgmt, client.PrometheusType, "monitoring.coreos.com/v1", nil)
