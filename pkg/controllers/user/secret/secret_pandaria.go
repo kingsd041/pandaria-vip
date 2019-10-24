@@ -92,8 +92,8 @@ func (n *PandariaNamespaceController) sync(key string, obj *corev1.Namespace) (r
 			for _, secret := range secrets {
 				namespacedSecret := getNamespacedSecret(secret, obj.Name)
 				// for pandaria
-				exist, err := n.clusterSecretsClient.Get(namespacedSecret.Name, metav1.GetOptions{})
-				if err != nil {
+				exist, err := n.clusterSecretsClient.GetNamespaced(obj.Name, namespacedSecret.Name, metav1.GetOptions{})
+				if err != nil && !errors.IsNotFound(err) {
 					return nil, err
 				}
 				if exist == nil {
