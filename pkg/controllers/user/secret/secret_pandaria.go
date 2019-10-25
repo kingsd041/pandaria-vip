@@ -191,10 +191,17 @@ func (s *ControllerPandaria) createOrUpdate(obj *corev1.Secret, action string) e
 		namespacedSecret := getNamespacedSecret(obj, namespace.Name)
 		switch action {
 		case create:
-			logrus.Infof("Copying secret [%s] into namespace [%s]", namespacedSecret.Name, namespace.Name)
-			_, err := s.secrets.Create(namespacedSecret)
-			if err != nil && !errors.IsAlreadyExists(err) {
+			// for pandaria
+			exist, err := s.secrets.GetNamespaced(namespace.Name, namespacedSecret.Name, metav1.GetOptions{})
+			if err != nil && !errors.IsNotFound(err) {
 				return err
+			}
+			if exist == nil {
+				logrus.Infof("Copying secret [%s] into namespace [%s]", namespacedSecret.Name, namespace.Name)
+				_, err := s.secrets.Create(namespacedSecret)
+				if err != nil && !errors.IsAlreadyExists(err) {
+					return err
+				}
 			}
 		case update:
 			_, err := s.secrets.Update(namespacedSecret)
