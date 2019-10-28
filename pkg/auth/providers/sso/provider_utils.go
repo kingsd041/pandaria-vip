@@ -23,16 +23,22 @@ import (
 )
 
 const (
-	creatorIDAnno = "field.cattle.io/creatorId"
-	projectIDAnno = "field.cattle.io/projectId"
+	creatorIDAnno             = "field.cattle.io/creatorId"
+	projectIDAnno             = "field.cattle.io/projectId"
+	RegionClusterKeyNameLabel = "regionClusterKeyName"
+	AuthRoleBindingLabel      = "pandaria.authz.saic.io/IamOpenID"
+	TenantNamespaceLabel      = "tenant.saic.pandaria.io/tenantId"
 )
 
 var (
 	roleScope = map[string]bool{
-		"project-owner":  true,
-		"project-member": true,
-		"cluster-owner":  false,
+		"project-owner":          true,
+		"project-member":         true,
+		"quota-manager":          true,
+		"network-policy-manager": true,
+		"cluster-owner":          false,
 	}
+	globalRole = []string{"quota-manager", "network-policy-manager"}
 )
 
 func (sp *ssoProvider) getClusterWithlabels(set labels.Set) (*v3.Cluster, error) {
@@ -100,8 +106,8 @@ func isUsingClusterKey(user DUser) bool {
 	return user.ServiceID == ""
 }
 
-func (sp *ssoProvider) reconcileProjectRoleBinding(project *v3.Project, amClient *amClient, user DUser) error {
-	projectRole, err := GetRoleFromUser(user, amClient)
+func (sp *ssoProvider) reconcileProjectRoleBinding(project *v3.Project, amClient *amClient, user DUser, clusterKeyName string) error {
+	projectRole, err := GetRoleFromUser(user, amClient, clusterKeyName)
 	if err != nil {
 		return err
 	}
@@ -368,8 +374,8 @@ func (sp *ssoProvider) ensureSAICProject(project *v3.Project) (*v3.Project, *cor
 	return project, namespace, nil
 }
 
-func (sp *ssoProvider) reconcileClusterRoleBinding(cluster *v3.Cluster, amClient *amClient, user DUser) error {
-	role, err := GetRoleFromUser(user, amClient)
+func (sp *ssoProvider) reconcileClusterRoleBinding(cluster *v3.Cluster, amClient *amClient, user DUser, clusterKeyName string) error {
+	role, err := GetRoleFromUser(user, amClient, clusterKeyName)
 	if err != nil {
 		return err
 	}

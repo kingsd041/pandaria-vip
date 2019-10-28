@@ -37,6 +37,7 @@ func newLoginHandler(ctx context.Context, mgmt *config.ScaledContext) *loginHand
 		tokenMGR: tokens.NewManager(ctx, mgmt),
 		lmt:      newIPRateLimiter(),
 		amt:      newAuthLimiter(),
+		smt:      newSaicAuthManager(mgmt),
 	}
 }
 
@@ -45,6 +46,7 @@ type loginHandler struct {
 	tokenMGR *tokens.Manager
 	lmt      *IPRateLimiter
 	amt      *AuthLimiter
+	smt      *SaicAuthManager
 }
 
 func (h *loginHandler) login(actionName string, action *types.Action, request *types.APIContext) error {
@@ -62,12 +64,16 @@ func (h *loginHandler) login(actionName string, action *types.Action, request *t
 
 	token, responseType, err := h.createLoginToken(request)
 	if err != nil {
-		// if user fails to authenticate, hide the details of the exact error. bad credentials will already be APIErrors
-		// otherwise, return a generic error message
-		if httperror.IsAPIError(err) {
-			return err
+		// SAIC: check error for save login failed cookies
+		_, isSAICSSOError := err.(*sso.SAICLoginError)
+		if !isSAICSSOError {
+			// if user fails to authenticate, hide the details of the exact error. bad credentials will already be APIErrors
+			// otherwise, return a generic error message
+			if httperror.IsAPIError(err) {
+				return err
+			}
+			return httperror.WrapAPIError(err, httperror.ServerError, "Server error while authenticating")
 		}
-		return httperror.WrapAPIError(err, httperror.ServerError, "Server error while authenticating")
 	}
 
 	if responseType == "cookie" {
@@ -79,6 +85,13 @@ func (h *loginHandler) login(actionName string, action *types.Action, request *t
 			HttpOnly: true,
 		}
 		http.SetCookie(w, tokenCookie)
+		// SAIC: return login failed cluster to UI
+		saicLoginError, isSAICSSOError := err.(*sso.SAICLoginError)
+		if isSAICSSOError {
+			result, _ := json.Marshal(saicLoginError)
+			w.Write(result)
+		}
+		// SAIC: end
 	} else if responseType == "saml" {
 		return nil
 	} else {
@@ -185,7 +198,11 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 			h.amt.MarkFailure(bLogin.Username, request)
 		}
 
-		return v3.Token{}, "", err
+		// SAIC: check error for save login failed cookies
+		_, isSAICSSOError := err.(*sso.SAICLoginError)
+		if !isSAICSSOError {
+			return v3.Token{}, "", err
+		}
 	}
 
 	logrus.Debug("User Authenticated")
@@ -194,9 +211,9 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 	if displayName == "" {
 		displayName = userPrincipal.LoginName
 	}
-	user, err := h.userMGR.EnsureUser(userPrincipal.Name, displayName)
-	if err != nil {
-		return v3.Token{}, "", err
+	user, e := h.userMGR.EnsureUser(userPrincipal.Name, displayName)
+	if e != nil {
+		return v3.Token{}, "", e
 	}
 
 	//displayname: change from sso to c01
@@ -205,10 +222,20 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 		userPrincipal.LoginName = user.DisplayName
 	}
 
+	// need to update global role binding with local user name for sso login
+	_, isssoProvider := input.(*v3public.SSOLogin)
+	if isssoProvider {
+		// ensure global role binding with user
+		h.smt.EnsureGlobalRolebinding(user, userPrincipal)
+	}
+
 	if user.Enabled != nil && !*user.Enabled {
 		return v3.Token{}, "", httperror.NewAPIError(httperror.PermissionDenied, "Permission Denied")
 	}
 
-	rToken, err := h.tokenMGR.NewLoginToken(user.Name, userPrincipal, groupPrincipals, providerToken, ttl, description)
+	rToken, e := h.tokenMGR.NewLoginToken(user.Name, userPrincipal, groupPrincipals, providerToken, ttl, description)
+	if e != nil {
+		return rToken, responseType, e
+	}
 	return rToken, responseType, err
 }

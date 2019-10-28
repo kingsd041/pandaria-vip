@@ -12,7 +12,6 @@ import (
 type amClient struct {
 	httpClient *http.Client
 	endpoint   string
-	clusterKey string
 	digest     string
 	jwt        string
 	region     string
@@ -69,7 +68,7 @@ func newDigestClient(jwt, digest string, client *http.Client) *digestClient {
 	}
 }
 
-func newAMClient(jwt, digest, region, clusterKey string, client *http.Client) *amClient {
+func newAMClient(jwt, digest, region string, client *http.Client) *amClient {
 	endpoint := settings.SaicAMHost.Get()
 	t := &TokenRoundTripper{token: jwt}
 	if client != nil {
@@ -79,7 +78,6 @@ func newAMClient(jwt, digest, region, clusterKey string, client *http.Client) *a
 		httpClient: &http.Client{Transport: t},
 		endpoint:   endpoint,
 		region:     region,
-		clusterKey: clusterKey,
 		digest:     digest,
 		jwt:        jwt,
 	}
@@ -110,29 +108,38 @@ func (c *amClient) GetUserInfo() (DUser, error) {
 	return DUser{}, nil
 }
 
-func (c *amClient) GetUserRoleFromAM() (string, error) {
+func (c *amClient) GetUserRoleFromAM() (*TenantActions, error) {
 	url := fmt.Sprintf("%s/v1/csp/actions", c.endpoint)
 	input := TenantActionInput{
 		Region:     c.region,
 		ServiceKey: settings.SaicServiceKeyName.Get(),
 		Digest:     c.digest,
 	}
-	var output TenantActions
-	resp, err := call(c.httpClient, http.MethodPost, url, input, &output)
+	output := &TenantActions{}
+	resp, err := call(c.httpClient, http.MethodPost, url, input, output)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to get response from request %s %+v", url, input)
+		return nil, errors.Wrapf(err, "failed to get response from request %s %+v", url, input)
 	}
 	defer resp.Body.Close()
 	respData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to read http response data")
+		return nil, errors.Wrapf(err, "failed to read http response data")
 	}
 	if !responseSuccess(resp) {
-		return "", fmt.Errorf("failed to call API to get iam actions, status code %d, response data %s", resp.StatusCode, string(respData))
+		return nil, fmt.Errorf("failed to call API to get iam actions, status code %d, response data %s", resp.StatusCode, string(respData))
+	}
+
+	return output, nil
+}
+
+func (c *amClient) GetUserRoleForClusterFromAM(clusterKey string) (string, error) {
+	output, err := c.GetUserRoleFromAM()
+	if err != nil {
+		return "", err
 	}
 	var actions []string
 	for _, cluster := range output.Data.ServiceRegionResp {
-		if cluster.RegionClusterKeyName == c.clusterKey {
+		if cluster.RegionClusterKeyName == clusterKey {
 			actions = cluster.Actions
 			break
 		}
@@ -209,9 +216,9 @@ func (dc *digestClient) GetTenantInfo(user DUser) (*TenantInfo, error) {
 	return rtn, nil
 }
 
-func GetRoleFromUser(user DUser, amClient *amClient) (string, error) {
+func GetRoleFromUser(user DUser, amClient *amClient, clusterKeyName string) (string, error) {
 	if isUsingClusterKey(user) {
-		return amClient.GetUserRoleFromAM()
+		return amClient.GetUserRoleForClusterFromAM(clusterKeyName)
 	}
 
 	var role string

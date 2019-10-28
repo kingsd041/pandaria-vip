@@ -34,8 +34,11 @@ var (
 	_ common.AuthProvider = &ssoProvider{}
 
 	roleMap = map[string]string{
-		"tenant_admin":  "project-owner",
-		"tenant_member": "project-member",
+		"tenant_admin":        "project-owner",
+		"tenant_member":       "project-member",
+		"admin_quota":         "quota-manager",
+		"admin_networkpolicy": "network-policy-manager",
+		"cluster_admin":       "cluster-owner",
 	}
 )
 
@@ -50,6 +53,8 @@ type ssoProvider struct {
 	prtbClient              v3.ProjectRoleTemplateBindingInterface
 	crtbLister              v3.ClusterRoleTemplateBindingLister
 	crtbClient              v3.ClusterRoleTemplateBindingInterface
+	grLister                v3.GlobalRoleBindingLister
+	grClient                v3.GlobalRoleBindingInterface
 	clusterLister           v3.ClusterLister
 	projectLister           v3.ProjectLister
 	projectInterface        v3.ProjectInterface
@@ -57,6 +62,14 @@ type ssoProvider struct {
 	projectLoggingLister    v3.ProjectLoggingLister
 	projectLoggingInterface v3.ProjectLoggingInterface
 	clusterManager          *clustermanager.Manager
+}
+
+type SAICLoginError struct {
+	TenantLoginFailedClusters string
+}
+
+func (e *SAICLoginError) Error() string {
+	return fmt.Sprintf(e.TenantLoginFailedClusters)
 }
 
 func Configure(
@@ -87,6 +100,8 @@ func Configure(
 		projectLoggingInterface: mgmtCtx.Management.ProjectLoggings(""),
 		roleTemplateLister:      mgmtCtx.Management.RoleTemplates("").Controller().Lister(),
 		clusterManager:          mgmtCtx.ClientGetter.(*clustermanager.Manager),
+		grLister:                mgmtCtx.Management.GlobalRoleBindings("").Controller().Lister(),
+		grClient:                mgmtCtx.Management.GlobalRoleBindings(""),
 	}
 }
 
@@ -134,12 +149,36 @@ func (sp *ssoProvider) loginUser(login *v3public.SSOLogin, config *v3.SSOConfig,
 			return userPrincipal, groupPrincipals, accessToken, err
 		}
 		userPrincipal = sp.toPrincipal(user, nil)
+	} else if login.SAICAutoLogin {
+		var user DUser
+		amClient := newAMClient(login.Jwt, login.Digest, login.Region, sp.ssoClient.httpClient)
+		user, err = amClient.GetUserInfo()
+		if err != nil {
+			err = errors.Wrapf(err, "failed to get user info with digest %s, region %s, cluster key %s", login.Digest, login.Region, login.RegionClusterKeyName)
+			logrus.Error(err)
+			return userPrincipal, groupPrincipals, accessToken, err
+		}
+		user.Jwt = login.Jwt
+		result, err := amClient.GetUserRoleFromAM()
+		if err != nil {
+			return userPrincipal, groupPrincipals, accessToken, err
+		}
+		_, err = sp.GetUserClustersAndProjects(result, user)
+		if err != nil {
+			if _, isLoginError := err.(*SAICLoginError); !isLoginError {
+				err = errors.Wrapf(err, "failed to get cluster & project with duser %+v", user)
+				logrus.Error(err)
+				return userPrincipal, groupPrincipals, accessToken, err
+			}
+		}
+		userPrincipal = sp.toPrincipal(user, nil)
+		userPrincipal.Me = true
+		return userPrincipal, groupPrincipals, accessToken, err
 	} else {
 		dClient := newDigestClient(login.Jwt, login.Digest, sp.ssoClient.httpClient)
-		amClient := newAMClient(login.Jwt, login.Digest, login.Region, login.RegionClusterKeyName, sp.ssoClient.httpClient)
+		amClient := newAMClient(login.Jwt, login.Digest, login.Region, sp.ssoClient.httpClient)
 		accessToken = login.Jwt
 		var user DUser
-		var err error
 		if login.Region == "" || login.RegionClusterKeyName == "" {
 			user, err = dClient.GetUserInfo()
 		} else {
@@ -166,11 +205,11 @@ func (sp *ssoProvider) loginUser(login *v3public.SSOLogin, config *v3.SSOConfig,
 		}
 
 		//don't need to return error if ensure project rolebinding fails.
-		if err := sp.reconcileProjectRoleBinding(project, amClient, user); err != nil {
+		if err := sp.reconcileProjectRoleBinding(project, amClient, user, login.RegionClusterKeyName); err != nil {
 			logrus.Errorf("failed to ensure project role binding of project %s for user %+v, error: %s", project.Name, user, err.Error())
 		}
 
-		if err := sp.reconcileClusterRoleBinding(cluster, amClient, user); err != nil {
+		if err := sp.reconcileClusterRoleBinding(cluster, amClient, user, login.RegionClusterKeyName); err != nil {
 			logrus.Errorf("failed to ensure cluster role binding of cluster %s for user %+v, error: %s", cluster.Name, user, err.Error())
 		}
 
