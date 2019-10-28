@@ -66,6 +66,31 @@ func addRoles(management *config.ManagementContext) (string, error) {
 	rb.addRole("User Base", "user-base").addRule().apiGroups("management.cattle.io").resources("preferences").verbs("*").
 		addRule().apiGroups("management.cattle.io").resources("settings").verbs("get", "list", "watch")
 
+	// SAIC: quota-manager tenant role
+	rb.addRole("Quota Manager", "quota-manager").
+		addRule().apiGroups("management.cattle.io").resources("clusters").verbs("update", "get", "list", "watch").
+		addRule().apiGroups("management.cattle.io").resources("projects").verbs("update", "get", "list", "watch").
+		addRule().apiGroups("management.cattle.io").resources("settings").verbs("get", "list", "watch").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-cpu-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-memory-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-service-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-secret-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-storage-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-configmap-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-nodeport-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-allocatedport-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-loadbalancer-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-persistentvolumeclaims-quota").verbs("update").
+		addRule().apiGroups("management.cattle.io").resources("settings").resourceNames("saic-replicationcontrollers-quota").verbs("update").
+		addRule().apiGroups("").resources("namespaces").verbs("update", "get", "list", "watch")
+
+	// SAIC: network-policy-manager tenant role
+	rb.addRole("NetworkPolicy Manager", "network-policy-manager").
+		addRule().apiGroups("management.cattle.io").resources("projects").verbs("get", "list", "watch").
+		addRule().apiGroups("saic.rancher.io").resources("snps").verbs("*").
+		addRule().apiGroups("").resources("namespaces").verbs("get", "list", "watch").
+		addRule().apiGroups("networking.k8s.io").resources("networkpolicies").verbs("get", "list", "watch")
+
 	// TODO user should be dynamically authorized to only see herself
 	// TODO Need "self-service" for nodetemplates such that a user can create them, but only RUD their own
 	// TODO enable when groups are "in". they need to be self-service
@@ -313,6 +338,15 @@ func addRoles(management *config.ManagementContext) (string, error) {
 	rb.addRoleTemplate("Project Monitoring View Role", "project-monitoring-readonly", "project", true, false, true, false).
 		addRule().apiGroups("monitoring.cattle.io").resources("prometheus").verbs("view").
 		setRoleTemplateNames("view")
+
+	// SAIC: Add quota manager tenant role
+	rb.addRoleTemplate("Quota Manager", "quota-manager", "project", true, false, false, false).
+		addRule().apiGroups("").resources("namespaces").verbs("update", "get", "list", "watch")
+
+	// SAIC: Add network policy manager tenant role
+	rb.addRoleTemplate("Network Policy Manager", "network-policy-manager", "project", true, false, false, false).
+		addRule().apiGroups("").resources("namespaces").verbs("get", "list", "watch").
+		addRule().apiGroups("networking.k8s.io").resources("networkpolicies").verbs("get", "list", "watch")
 
 	// Not specific to project or cluster
 	// TODO When clusterevents has value, consider adding this back in
