@@ -60,6 +60,7 @@ func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig,
 	} else {
 		content = resolveSystemRegistry(content)
 	}
+	content = resolveControllerClusterCIDR(cfg.Services.KubeController.ClusterCIDR, content)
 
 	path := fmt.Sprintf("%s.%s", template, clusterName)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
@@ -109,6 +110,7 @@ func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig, c
 	} else {
 		content = resolveSystemRegistry(content)
 	}
+	content = resolveControllerClusterCIDR(cfg.Services.KubeController.ClusterCIDR, content)
 
 	path := fmt.Sprintf("%s.%s", template, clusterName)
 	err = ioutil.WriteFile(path, []byte(content), 0644)
@@ -182,4 +184,20 @@ func resolveRKERegistry(content, registry string) string {
 
 		return origin
 	})
+}
+
+func resolveControllerClusterCIDR(cidr, content string) string {
+	if cidr != "10.42.0.0/16" {
+		exp := `"Network": "10.42.0.0/16"`
+		return regexp.MustCompile(exp).ReplaceAllStringFunc(content, func(origin string) string {
+			s := strings.SplitN(origin, ":", 2)
+			if len(s) != 2 {
+				return origin
+			}
+			res := fmt.Sprintf(`"Network": "%s"`, cidr)
+			logrus.Debugf("networkaddons: Network cidr replaced by %s", res)
+			return res
+		})
+	}
+	return content
 }
