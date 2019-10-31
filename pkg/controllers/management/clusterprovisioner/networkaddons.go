@@ -3,6 +3,7 @@ package clusterprovisioner
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"regexp"
@@ -187,6 +188,13 @@ func resolveRKERegistry(content, registry string) string {
 }
 
 func resolveControllerClusterCIDR(cidr, content string) string {
+	if cidr == "" {
+		return content
+	}
+	_, _, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return content
+	}
 	if cidr != "10.42.0.0/16" {
 		exp := `"Network": "10.42.0.0/16"`
 		return regexp.MustCompile(exp).ReplaceAllStringFunc(content, func(origin string) string {
