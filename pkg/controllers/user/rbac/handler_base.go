@@ -122,6 +122,9 @@ func Register(ctx context.Context, workload *config.UserContext) {
 	grbi := workload.Management.Management.GlobalRoleBindings("")
 	grbSync := v3.NewGlobalRoleBindingLifecycleAdapter("grb-sync_"+workload.ClusterName, true, grbi, newGlobalRoleBindingHandler(workload))
 	workload.Management.Management.GlobalRoleBindings("").AddHandler(ctx, "grb-sync", grbSync)
+
+	// SAIC: watch role of project-owner
+	StartRTBWatcher(ctx, workload)
 }
 
 type manager struct {

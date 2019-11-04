@@ -277,7 +277,9 @@ func (m *manager) createMembershipRole(resourceType, roleName string, makeOwner 
 	}
 
 	if makeOwner {
-		rules[0].Verbs = []string{"*"}
+		// SAIC: forbidden update project for project-owner
+		//rules[0].Verbs = []string{"*"}
+		rules[0].Verbs = []string{"get", "list", "watch"}
 	} else {
 		rules[0].Verbs = []string{"get"}
 	}
