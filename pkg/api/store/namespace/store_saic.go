@@ -16,6 +16,10 @@ import (
 	mgmtclient "github.com/rancher/types/client/management/v3"
 )
 
+var (
+	TenantNamespaceLabel = "tenant.saic.pandaria.io/tenantId"
+)
+
 func NewSAIC(store types.Store) types.Store {
 	t := &transform.Store{
 		Store: store,
@@ -50,12 +54,30 @@ func (p *SAICStore) Create(apiContext *types.APIContext, schema *types.Schema, d
 		return nil, err
 	}
 
+	// SAIC: Add tenant label for ns
+	tenantID, err := p.ensureSAICNamespaceLabel(apiContext, schema, data, "", false)
+	if err != nil {
+		return nil, err
+	}
+	if tenantID != "" {
+		values.PutValue(data, tenantID, "labels", TenantNamespaceLabel)
+	}
+
 	return p.Store.Create(apiContext, schema, data)
 }
 
 func (p *SAICStore) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
 	if err := p.validateResourceQuota(apiContext, schema, data, id, true); err != nil {
 		return nil, err
+	}
+
+	// SAIC: Add tenant label for ns
+	tenantID, err := p.ensureSAICNamespaceLabel(apiContext, schema, data, id, true)
+	if err != nil {
+		return nil, err
+	}
+	if tenantID != "" {
+		values.PutValue(data, tenantID, "labels", TenantNamespaceLabel)
 	}
 
 	return p.Store.Update(apiContext, schema, data, id)
@@ -173,4 +195,30 @@ func (p *SAICStore) validateResourceQuota(apiContext *types.APIContext, schema *
 	}
 
 	return httperror.NewFieldAPIError(httperror.MaxLimitExceeded, quotaField, fmt.Sprintf("exceeds projectLimit on fields: %s", msg))
+}
+
+func (p *SAICStore) ensureSAICNamespaceLabel(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string, update bool) (string, error) {
+	projectID := convert.ToString(data["projectId"])
+	if update {
+		var ns clusterclient.Namespace
+		if err := access.ByID(apiContext, &schema.Version, clusterclient.NamespaceType, id, &ns); err != nil {
+			return "", err
+		}
+		projectID = ns.ProjectID
+	}
+	if projectID == "" {
+		return "", nil
+	}
+
+	var project mgmtclient.Project
+	if err := access.ByID(apiContext, &mgmtschema.Version, mgmtclient.ProjectType, projectID, &project); err != nil {
+		return "", err
+	}
+
+	tenantID, ok := project.Labels["tenant-id"]
+	if !ok {
+		return "", nil
+	}
+
+	return tenantID, nil
 }

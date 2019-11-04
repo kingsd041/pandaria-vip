@@ -24,6 +24,7 @@ var (
 	namespaceOwnerMap       = cache.NewLRUExpireCache(1000)
 	resourceQuotaAnnotation = "field.cattle.io/resourceQuota"
 	limitRangeAnnotation    = "field.cattle.io/containerDefaultResourceLimit"
+	TenantNamespaceLabel    = "tenant.saic.pandaria.io/tenantId"
 )
 
 func updateNamespaceOwnerMap(apiContext *types.APIContext) error {
@@ -77,6 +78,8 @@ func (w ActionWrapper) ActionHandler(actionName string, action *types.Action, ap
 			}
 			return httperror.NewAPIError(httperror.NotFound, err.Error())
 		}
+		// SAIC: Add tenantID for namespace
+		var tenantID string
 		if projectID != "" {
 			project, err := userContext.Management.Management.Projects(clusterID).Get(projectID, metav1.GetOptions{})
 			if err != nil {
@@ -85,6 +88,7 @@ func (w ActionWrapper) ActionHandler(actionName string, action *types.Action, ap
 			if project.Spec.ResourceQuota != nil {
 				return errors.Errorf("can't move namespace. Project %s has resource quota set", project.Spec.DisplayName)
 			}
+			tenantID = project.Labels["tenant-id"]
 		}
 		nsClient := userContext.Core.Namespaces("")
 		ns, err := nsClient.Get(apiContext.ID, metav1.GetOptions{})
@@ -101,6 +105,10 @@ func (w ActionWrapper) ActionHandler(actionName string, action *types.Action, ap
 			delete(ns.Annotations, projectIDFieldLabel)
 		} else {
 			ns.Annotations[projectIDFieldLabel] = convert.ToString(actionInput["projectId"])
+			// SAIC: Add tenantID for namespace
+			if tenantID != "" {
+				ns.Labels[TenantNamespaceLabel] = tenantID
+			}
 		}
 		// for pandaria
 		delete(ns.Annotations, resourceQuotaAnnotation)
