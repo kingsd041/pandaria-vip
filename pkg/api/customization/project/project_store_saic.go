@@ -185,6 +185,33 @@ func (s *projectSAICStore) isQuotaFit(apiContext *types.APIContext, nsQuotaLimit
 		if err := access.ByID(apiContext, &mgmtschema.Version, mgmtclient.ProjectType, id, &project); err != nil {
 			return err
 		}
+	}
+
+	// check that project quota is within cluster quota
+	if clusterID == "" && project.ClusterID != "" {
+		clusterID = project.ClusterID
+	}
+	cluster, err := s.clusterLister.Get("", clusterID)
+	if err != nil {
+		return err
+	}
+
+	// aggregate project's quota limit which below to the cluster
+	projects, err := s.projectLister.List(cluster.Name, labels.Everything())
+	if err != nil {
+		return err
+	}
+
+	isFit, msg, err = resourcequota.IsProjectQuotaFitCluster(projects, cluster, id, projectQuotaLimit)
+	if err != nil {
+		return err
+	}
+	if !isFit {
+		return httperror.NewFieldAPIError(httperror.MaxLimitExceeded, quotaField, fmt.Sprintf("exceeds %s on fields: %s",
+			clusterAllocatableField, msg))
+	}
+
+	if id != "" {
 		// check if fields were added or removed
 		// and update project's namespaces accordingly
 		defaultQuotaLimitMap, err := convert.EncodeToMap(nsQuotaLimit)
@@ -274,30 +301,6 @@ func (s *projectSAICStore) isQuotaFit(apiContext *types.APIContext, nsQuotaLimit
 				fmt.Sprintf("exceeds project limit on fields %s when applied to all namespaces in a project",
 					msg))
 		}
-	}
-
-	// check that project quota is within cluster quota
-	if clusterID == "" && project.ClusterID != "" {
-		clusterID = project.ClusterID
-	}
-	cluster, err := s.clusterLister.Get("", clusterID)
-	if err != nil {
-		return err
-	}
-
-	// aggregate project's quota limit which below to the cluster
-	projects, err := s.projectLister.List(cluster.Name, labels.Everything())
-	if err != nil {
-		return err
-	}
-
-	isFit, msg, err = resourcequota.IsProjectQuotaFitCluster(projects, cluster, id, projectQuotaLimit)
-	if err != nil {
-		return err
-	}
-	if !isFit {
-		return httperror.NewFieldAPIError(httperror.MaxLimitExceeded, quotaField, fmt.Sprintf("exceeds %s on fields: %s",
-			clusterAllocatableField, msg))
 	}
 
 	return nil
