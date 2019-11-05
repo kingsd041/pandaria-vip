@@ -88,6 +88,7 @@ func addRoles(management *config.ManagementContext) (string, error) {
 	rb.addRole("NetworkPolicy Manager", "network-policy-manager").
 		addRule().apiGroups("management.cattle.io").resources("projects").verbs("get", "list", "watch").
 		addRule().apiGroups("saic.rancher.io").resources("snps").verbs("*").
+		addRule().apiGroups("saic.rancher.io").resources("snprules").verbs("*").
 		addRule().apiGroups("").resources("namespaces").verbs("get", "list", "watch").
 		addRule().apiGroups("networking.k8s.io").resources("networkpolicies").verbs("get", "list", "watch")
 
@@ -182,6 +183,16 @@ func addRoles(management *config.ManagementContext) (string, error) {
 
 	rb.addRoleTemplate("Manage Cluster Backups", "backups-manage", "cluster", true, false, false, false).
 		addRule().apiGroups("management.cattle.io").resources("etcdbackups").verbs("*")
+
+	// SAIC: Add quota manager tenant role on each cluster
+	rb.addRoleTemplate("Quota Manager", "quota-manager", "cluster", true, false, false, false).
+		addRule().apiGroups("").resources("namespaces").verbs("update", "get", "list", "watch").
+		addRule().apiGroups("*").resources("nodes").verbs("get", "list", "watch")
+
+	// SAIC: Add network policy manager tenant role on each cluster
+	rb.addRoleTemplate("Network Policy Manager", "network-policy-manager", "cluster", true, false, false, false).
+		addRule().apiGroups("").resources("namespaces").verbs("get", "list", "watch").
+		addRule().apiGroups("networking.k8s.io").resources("networkpolicies").verbs("get", "list", "watch")
 
 	// Project roles
 	rb.addRoleTemplate("Project Owner", "project-owner", "project", true, false, false, false).
@@ -338,15 +349,6 @@ func addRoles(management *config.ManagementContext) (string, error) {
 	rb.addRoleTemplate("Project Monitoring View Role", "project-monitoring-readonly", "project", true, false, true, false).
 		addRule().apiGroups("monitoring.cattle.io").resources("prometheus").verbs("view").
 		setRoleTemplateNames("view")
-
-	// SAIC: Add quota manager tenant role
-	rb.addRoleTemplate("Quota Manager", "quota-manager", "project", true, false, false, false).
-		addRule().apiGroups("").resources("namespaces").verbs("update", "get", "list", "watch")
-
-	// SAIC: Add network policy manager tenant role
-	rb.addRoleTemplate("Network Policy Manager", "network-policy-manager", "project", true, false, false, false).
-		addRule().apiGroups("").resources("namespaces").verbs("get", "list", "watch").
-		addRule().apiGroups("networking.k8s.io").resources("networkpolicies").verbs("get", "list", "watch")
 
 	// Not specific to project or cluster
 	// TODO When clusterevents has value, consider adding this back in

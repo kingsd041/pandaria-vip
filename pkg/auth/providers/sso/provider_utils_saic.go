@@ -103,7 +103,7 @@ func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, 
 				logrus.Errorf("failed to ensure cluster role binding of cluster %s for user %+v, error: %s", cluster.Name, user, err.Error())
 			}
 
-			if err := sp.reconcileGlobalRoleBinding(clusterAction, user); err != nil {
+			if err := sp.reconcileGlobalRoleBinding(clusterAction, user, cluster); err != nil {
 				logrus.Errorf("fail to ensure global role binding of user %+v, error: %s", user, err.Error())
 			}
 		}
@@ -270,7 +270,7 @@ func isQuotaFit(projects []*v3.Project, cluster *v3.Cluster, p *v3.Project) erro
 	return nil
 }
 
-func (sp *ssoProvider) reconcileGlobalRoleBinding(actions []string, user DUser) error {
+func (sp *ssoProvider) reconcileGlobalRoleBinding(actions []string, user DUser, cluster *v3.Cluster) error {
 	roleList := []string{}
 	for _, action := range actions {
 		if role, ok := roleMap[action]; ok {
@@ -328,7 +328,7 @@ func (sp *ssoProvider) reconcileGlobalRoleBinding(actions []string, user DUser) 
 		}
 	}
 
-	return nil
+	return sp.ensureClusterGlobalRoleBinding(roleList, cluster, user)
 }
 
 func (sp *ssoProvider) ensureProjectRoleBinding(actions []string, project *v3.Project, user DUser, cluster *v3.Cluster) error {
@@ -436,6 +436,71 @@ func (sp *ssoProvider) ensureClusterRoleBinding(actions []string, user DUser, cl
 	} else if err == nil && toDelete { //delete case
 		logrus.Infof("user %s is no longer cluster %s owner, delete crtb", user.IamOpenID, cluster.Name)
 		return sp.crtbClient.DeleteNamespaced(cluster.Name, crtb.Name, &metav1.DeleteOptions{})
+	}
+
+	return nil
+}
+
+func (sp *ssoProvider) ensureClusterGlobalRoleBinding(actions []string, cluster *v3.Cluster, user DUser) error {
+	set := labels.Set(map[string]string{
+		AuthRoleBindingLabel:       user.IamOpenID,
+		AuthGlobalRoleBindingLabel: "true",
+	})
+	crtbList, err := sp.crtbLister.List("", set.AsSelector())
+	if err != nil {
+		return err
+	}
+
+	deleteRolebinding := []*v3.ClusterRoleTemplateBinding{}
+	for _, crtb := range crtbList {
+		if !slice.ContainsString(actions, crtb.RoleTemplateName) {
+			deleteRolebinding = append(deleteRolebinding, crtb)
+		}
+	}
+
+	newRoleList := []string{}
+	for _, action := range actions {
+		found := false
+		for _, crtb := range crtbList {
+			if crtb.RoleTemplateName == action {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newRoleList = append(newRoleList, action)
+		}
+	}
+
+	for _, crtb := range deleteRolebinding {
+		logrus.Infof("user %s is no longer has global role %s, delete crtb of cluster %s", user.Username, crtb.RoleTemplateName, cluster.Name)
+		err = sp.crtbClient.DeleteNamespaced(cluster.Name, crtb.Name, &metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, role := range newRoleList {
+		displayName := user.Username
+		if displayName == "" {
+			displayName = user.IamOpenID
+		}
+		_, err = sp.crtbClient.Create(&v3.ClusterRoleTemplateBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        user.IamOpenID,
+				Namespace:   cluster.Name,
+				Annotations: map[string]string{"auth.cattle.io/principal-display-name": displayName},
+				Labels: map[string]string{
+					AuthRoleBindingLabel:       user.IamOpenID,
+					AuthGlobalRoleBindingLabel: "true",
+				},
+			},
+			UserPrincipalName: Name + "_user://" + user.IamOpenID,
+			RoleTemplateName:  role,
+		})
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return err
+		}
 	}
 
 	return nil

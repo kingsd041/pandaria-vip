@@ -23,19 +23,20 @@ import (
 )
 
 const (
-	creatorIDAnno             = "field.cattle.io/creatorId"
-	projectIDAnno             = "field.cattle.io/projectId"
-	RegionClusterKeyNameLabel = "regionClusterKeyName"
-	AuthRoleBindingLabel      = "pandaria.authz.saic.io/IamOpenID"
-	TenantNamespaceLabel      = "tenant.saic.pandaria.io/tenantId"
+	creatorIDAnno              = "field.cattle.io/creatorId"
+	projectIDAnno              = "field.cattle.io/projectId"
+	RegionClusterKeyNameLabel  = "regionClusterKeyName"
+	AuthRoleBindingLabel       = "pandaria.authz.saic.io/IamOpenID"
+	TenantNamespaceLabel       = "tenant.saic.pandaria.io/tenantId"
+	AuthGlobalRoleBindingLabel = "pandaria.authz.saic.io/globalRole"
 )
 
 var (
 	roleScope = map[string]bool{
 		"project-owner":          true,
 		"project-member":         true,
-		"quota-manager":          true,
-		"network-policy-manager": true,
+		"quota-manager":          false,
+		"network-policy-manager": false,
 		"cluster-owner":          false,
 	}
 	globalRole = []string{"quota-manager", "network-policy-manager"}
