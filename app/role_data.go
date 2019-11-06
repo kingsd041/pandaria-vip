@@ -187,7 +187,9 @@ func addRoles(management *config.ManagementContext) (string, error) {
 	// SAIC: Add quota manager tenant role on each cluster
 	rb.addRoleTemplate("Quota Manager", "quota-manager", "cluster", true, false, false, false).
 		addRule().apiGroups("").resources("namespaces").verbs("update", "get", "list", "watch").
-		addRule().apiGroups("*").resources("nodes").verbs("get", "list", "watch")
+		addRule().apiGroups("management.cattle.io").resources("nodes", "nodepools").verbs("get", "list", "watch").
+		addRule().apiGroups("*").resources("nodes").verbs("get", "list", "watch").
+		addRule().apiGroups("management.cattle.io").resources("clustermonitorgraphs").verbs("get", "list", "watch")
 
 	// SAIC: Add network policy manager tenant role on each cluster
 	rb.addRoleTemplate("Network Policy Manager", "network-policy-manager", "cluster", true, false, false, false).
@@ -221,6 +223,7 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("monitoring.coreos.com").resources("prometheuses", "prometheusRules", "serviceMonitors").verbs("*").
 		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
 		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch").
+		addRule().apiGroups("*").resources("nodes").verbs("get", "list", "watch").
 		setRoleTemplateNames("admin")
 
 	rb.addRoleTemplate("Project Member", "project-member", "project", true, false, false, false).
@@ -247,6 +250,7 @@ func addRoles(management *config.ManagementContext) (string, error) {
 		addRule().apiGroups("monitoring.coreos.com").resources("prometheuses", "prometheusRules", "serviceMonitors").verbs("*").
 		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlansubnets").verbs("get", "list", "watch").
 		addRule().apiGroups("macvlan.cluster.cattle.io").resources("macvlanips").verbs("get", "list", "watch").
+		addRule().apiGroups("*").resources("nodes").verbs("get", "list", "watch").
 		setRoleTemplateNames("edit")
 
 	rb.addRoleTemplate("Read-only", "read-only", "project", true, false, false, false).

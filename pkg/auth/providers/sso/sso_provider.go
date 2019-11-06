@@ -21,6 +21,7 @@ import (
 	"github.com/rancher/types/config"
 	"github.com/rancher/types/user"
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -62,6 +63,7 @@ type ssoProvider struct {
 	projectLoggingLister    v3.ProjectLoggingLister
 	projectLoggingInterface v3.ProjectLoggingInterface
 	clusterManager          *clustermanager.Manager
+	smt                     *SaicAuthManager
 }
 
 type SAICLoginError struct {
@@ -102,6 +104,7 @@ func Configure(
 		clusterManager:          mgmtCtx.ClientGetter.(*clustermanager.Manager),
 		grLister:                mgmtCtx.Management.GlobalRoleBindings("").Controller().Lister(),
 		grClient:                mgmtCtx.Management.GlobalRoleBindings(""),
+		smt:                     newSaicAuthManager(mgmtCtx),
 	}
 }
 
@@ -163,7 +166,8 @@ func (sp *ssoProvider) loginUser(login *v3public.SSOLogin, config *v3.SSOConfig,
 		if err != nil {
 			return userPrincipal, groupPrincipals, accessToken, err
 		}
-		_, err = sp.GetUserClustersAndProjects(result, user)
+		// login for cluster role and project role
+		clusterList, err := sp.GetUserClustersAndProjects(result, user)
 		if err != nil {
 			if _, isLoginError := err.(*SAICLoginError); !isLoginError {
 				err = errors.Wrapf(err, "failed to get cluster & project with duser %+v", user)
@@ -173,6 +177,18 @@ func (sp *ssoProvider) loginUser(login *v3public.SSOLogin, config *v3.SSOConfig,
 		}
 		userPrincipal = sp.toPrincipal(user, nil)
 		userPrincipal.Me = true
+		displayName := userPrincipal.DisplayName
+		if displayName == "" {
+			displayName = userPrincipal.LoginName
+		}
+		// ensure user to bind global role
+		rancherUser, e := sp.userMGR.EnsureUser(userPrincipal.Name, displayName)
+		if e != nil && !apierrors.IsAlreadyExists(e) && !apierrors.IsConflict(err) {
+			return userPrincipal, groupPrincipals, accessToken, e
+		}
+		// ensure global rolebinding
+		sp.smt.EnsureGlobalRolebinding(clusterList, result, user, rancherUser, userPrincipal)
+
 		return userPrincipal, groupPrincipals, accessToken, err
 	} else {
 		dClient := newDigestClient(login.Jwt, login.Digest, sp.ssoClient.httpClient)

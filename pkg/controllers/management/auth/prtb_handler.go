@@ -40,6 +40,7 @@ var prtbClusterManagmentPlaneResources = map[string]string{
 	"clustercatalogs":         "management.cattle.io",
 	"catalogtemplates":        "management.cattle.io",
 	"catalogtemplateversions": "management.cattle.io",
+	"nodes":                   "",
 }
 
 type prtbLifecycle struct {

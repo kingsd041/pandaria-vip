@@ -25,6 +25,7 @@ import (
 	"github.com/rancher/types/config"
 	"github.com/rancher/types/user"
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -37,7 +38,6 @@ func newLoginHandler(ctx context.Context, mgmt *config.ScaledContext) *loginHand
 		tokenMGR: tokens.NewManager(ctx, mgmt),
 		lmt:      newIPRateLimiter(),
 		amt:      newAuthLimiter(),
-		smt:      newSaicAuthManager(mgmt),
 	}
 }
 
@@ -46,7 +46,6 @@ type loginHandler struct {
 	tokenMGR *tokens.Manager
 	lmt      *IPRateLimiter
 	amt      *AuthLimiter
-	smt      *SaicAuthManager
 }
 
 func (h *loginHandler) login(actionName string, action *types.Action, request *types.APIContext) error {
@@ -212,7 +211,7 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 		displayName = userPrincipal.LoginName
 	}
 	user, e := h.userMGR.EnsureUser(userPrincipal.Name, displayName)
-	if e != nil {
+	if e != nil && !apierrors.IsAlreadyExists(e) && !apierrors.IsConflict(e) {
 		return v3.Token{}, "", e
 	}
 
@@ -220,13 +219,6 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 	if strings.Contains(userPrincipal.DisplayName, "ssologin") {
 		userPrincipal.DisplayName = user.DisplayName
 		userPrincipal.LoginName = user.DisplayName
-	}
-
-	// need to update global role binding with local user name for sso login
-	_, isssoProvider := input.(*v3public.SSOLogin)
-	if isssoProvider {
-		// ensure global role binding with user
-		h.smt.EnsureGlobalRolebinding(user, userPrincipal)
 	}
 
 	if user.Enabled != nil && !*user.Enabled {

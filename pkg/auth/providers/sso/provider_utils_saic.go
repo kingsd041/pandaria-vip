@@ -38,7 +38,7 @@ type TenantLoginFailedCluster struct {
 	Message              string `json:"message"`
 }
 
-func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, user DUser) ([]TenantLoginFailedCluster, error) {
+func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, user DUser) ([]*v3.Cluster, error) {
 	regionClusters := []string{}
 	clusterActions := map[string][]string{}
 	// find cluster list in rancher with regionClusterKeyName label
@@ -71,7 +71,7 @@ func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, 
 	for _, cluster := range clusterList {
 		clusterKeyName := cluster.Labels[RegionClusterKeyNameLabel]
 		if clusterAction, ok := clusterActions[clusterKeyName]; ok {
-			logrus.Debugf("login for cluster %v with actions %v", clusterKeyName, clusterAction)
+			logrus.Debugf("login for cluster %v with actions %v for user %s", clusterKeyName, clusterAction, user.Username)
 			project, err := sp.checkProjectWithClusterAndUser(cluster, user)
 			if err != nil {
 				failedCluster := TenantLoginFailedCluster{
@@ -102,10 +102,6 @@ func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, 
 			if err := sp.ensureClusterRoleBinding(clusterAction, user, cluster); err != nil {
 				logrus.Errorf("failed to ensure cluster role binding of cluster %s for user %+v, error: %s", cluster.Name, user, err.Error())
 			}
-
-			if err := sp.reconcileGlobalRoleBinding(clusterAction, user, cluster); err != nil {
-				logrus.Errorf("fail to ensure global role binding of user %+v, error: %s", user, err.Error())
-			}
 		}
 	}
 
@@ -115,10 +111,10 @@ func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, 
 			logrus.Errorf("convert failed cluster list %v error: %v", failedClusters, e)
 			return nil, e
 		}
-		return failedClusters, &SAICLoginError{string(result)}
+		return clusterList, &SAICLoginError{string(result)}
 	}
 
-	return nil, nil
+	return clusterList, nil
 }
 
 func (sp *ssoProvider) checkProjectWithClusterAndUser(cluster *v3.Cluster, user DUser) (*v3.Project, error) {
@@ -157,10 +153,18 @@ func (sp *ssoProvider) isAvailableProject(project *v3.Project, cluster *v3.Clust
 		if project.Spec.DisplayName == p.Spec.DisplayName {
 			project = p
 			found = true
+			break
 		}
 	}
 
 	if !found {
+		logrus.Debugf("Need to create new project for tenant %v on cluster %s", project.Labels, project.Namespace)
+		// get all projects on same cluster to validate quota limit
+		allProjects, err := sp.projectLister.List(project.Namespace, labels.Everything())
+		if err != nil {
+			return nil, err
+		}
+		logrus.Debugf("Get all projects %d on cluster %s", len(allProjects), project.Namespace)
 		// get saic tenant default quota
 		project.Spec.ResourceQuota = &v3.ProjectResourceQuota{
 			Limit: sp.defaultProjectQuota(),
@@ -169,8 +173,9 @@ func (sp *ssoProvider) isAvailableProject(project *v3.Project, cluster *v3.Clust
 			Limit: sp.defaultProjectQuota(),
 		}
 		// check quota
-		err = isQuotaFit(projectList, cluster, project)
+		err = isQuotaFit(allProjects, cluster, project)
 		if err != nil {
+			logrus.Errorf("Failed to create project: %v", err)
 			return nil, err
 		}
 		// create project
@@ -213,7 +218,7 @@ func (sp *ssoProvider) isAvailableProject(project *v3.Project, cluster *v3.Clust
 }
 
 func (sp *ssoProvider) ensureNamespace(project *v3.Project) error {
-	logrus.Infof("find namespace for tenant %s", project.Labels["tenant-id"])
+	logrus.Debugf("find namespace for tenant %s", project.Labels["tenant-id"])
 	// check whether need ensure namespace
 	usercontext, err := sp.clusterManager.UserContext(project.Namespace)
 	if err != nil {
@@ -270,67 +275,6 @@ func isQuotaFit(projects []*v3.Project, cluster *v3.Cluster, p *v3.Project) erro
 	return nil
 }
 
-func (sp *ssoProvider) reconcileGlobalRoleBinding(actions []string, user DUser, cluster *v3.Cluster) error {
-	roleList := []string{}
-	for _, action := range actions {
-		if role, ok := roleMap[action]; ok {
-			if slice.ContainsString(globalRole, role) {
-				roleList = append(roleList, role)
-			}
-		}
-	}
-	set := labels.Set(map[string]string{AuthRoleBindingLabel: user.IamOpenID})
-	grList, err := sp.grLister.List("", set.AsSelector())
-	if err != nil {
-		return err
-	}
-
-	deleteRoleBinding := []*v3.GlobalRoleBinding{}
-	newRoleBinding := []string{}
-
-	for _, gr := range grList {
-		if !slice.ContainsString(roleList, gr.GlobalRoleName) {
-			deleteRoleBinding = append(deleteRoleBinding, gr)
-		}
-	}
-
-	for _, r := range roleList {
-		found := false
-		for _, gr := range grList {
-			if r == gr.GlobalRoleName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			newRoleBinding = append(newRoleBinding, r)
-		}
-	}
-
-	for _, gr := range deleteRoleBinding {
-		err = sp.grClient.Delete(gr.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, role := range newRoleBinding {
-		// create globalrolebinding without user, will update after login ensure user
-		_, err = sp.grClient.Create(&v3.GlobalRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "globalrolebinding-",
-				Labels:       map[string]string{AuthRoleBindingLabel: user.IamOpenID},
-			},
-			GlobalRoleName: role,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return sp.ensureClusterGlobalRoleBinding(roleList, cluster, user)
-}
-
 func (sp *ssoProvider) ensureProjectRoleBinding(actions []string, project *v3.Project, user DUser, cluster *v3.Cluster) error {
 	projectRoleList := []string{}
 	for _, action := range actions {
@@ -340,6 +284,8 @@ func (sp *ssoProvider) ensureProjectRoleBinding(actions []string, project *v3.Pr
 			}
 		}
 	}
+
+	logrus.Debugf("ensure project role %v for user %s", projectRoleList, user.Username)
 
 	set := labels.Set(map[string]string{AuthRoleBindingLabel: user.IamOpenID})
 	prtbList, err := sp.prtbLister.List(project.Name, set.AsSelector())
@@ -351,6 +297,7 @@ func (sp *ssoProvider) ensureProjectRoleBinding(actions []string, project *v3.Pr
 	newRoleList := []string{}
 
 	for _, prtb := range prtbList {
+		logrus.Debugf("get exist project role binding %s, with role %s", prtb.Name, prtb.RoleTemplateName)
 		if !slice.ContainsString(projectRoleList, prtb.RoleTemplateName) {
 			deleteRoleList = append(deleteRoleList, prtb)
 		}
@@ -370,7 +317,7 @@ func (sp *ssoProvider) ensureProjectRoleBinding(actions []string, project *v3.Pr
 	}
 
 	for _, prtb := range deleteRoleList { // delete case
-		logrus.Infof("user %s is no longer project %s role %s, delete it", user.IamOpenID, project.Name, actions)
+		logrus.Debugf("user %s is no longer project %s role %s, delete it", user.IamOpenID, project.Name, actions)
 		err = sp.prtbClient.DeleteNamespaced(project.Name, prtb.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
@@ -383,6 +330,7 @@ func (sp *ssoProvider) ensureProjectRoleBinding(actions []string, project *v3.Pr
 		displayName = user.IamOpenID
 	}
 	for _, projectRole := range newRoleList {
+		logrus.Debugf("create new project role binding for %s, user %s", projectRole, displayName)
 		_, err = sp.prtbClient.Create(&v3.ProjectRoleTemplateBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-", user.IamOpenID),
@@ -434,73 +382,8 @@ func (sp *ssoProvider) ensureClusterRoleBinding(actions []string, user DUser, cl
 			return err
 		}
 	} else if err == nil && toDelete { //delete case
-		logrus.Infof("user %s is no longer cluster %s owner, delete crtb", user.IamOpenID, cluster.Name)
+		logrus.Debugf("user %s is no longer cluster %s owner, delete crtb", user.IamOpenID, cluster.Name)
 		return sp.crtbClient.DeleteNamespaced(cluster.Name, crtb.Name, &metav1.DeleteOptions{})
-	}
-
-	return nil
-}
-
-func (sp *ssoProvider) ensureClusterGlobalRoleBinding(actions []string, cluster *v3.Cluster, user DUser) error {
-	set := labels.Set(map[string]string{
-		AuthRoleBindingLabel:       user.IamOpenID,
-		AuthGlobalRoleBindingLabel: "true",
-	})
-	crtbList, err := sp.crtbLister.List("", set.AsSelector())
-	if err != nil {
-		return err
-	}
-
-	deleteRolebinding := []*v3.ClusterRoleTemplateBinding{}
-	for _, crtb := range crtbList {
-		if !slice.ContainsString(actions, crtb.RoleTemplateName) {
-			deleteRolebinding = append(deleteRolebinding, crtb)
-		}
-	}
-
-	newRoleList := []string{}
-	for _, action := range actions {
-		found := false
-		for _, crtb := range crtbList {
-			if crtb.RoleTemplateName == action {
-				found = true
-				break
-			}
-		}
-		if !found {
-			newRoleList = append(newRoleList, action)
-		}
-	}
-
-	for _, crtb := range deleteRolebinding {
-		logrus.Infof("user %s is no longer has global role %s, delete crtb of cluster %s", user.Username, crtb.RoleTemplateName, cluster.Name)
-		err = sp.crtbClient.DeleteNamespaced(cluster.Name, crtb.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, role := range newRoleList {
-		displayName := user.Username
-		if displayName == "" {
-			displayName = user.IamOpenID
-		}
-		_, err = sp.crtbClient.Create(&v3.ClusterRoleTemplateBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        user.IamOpenID,
-				Namespace:   cluster.Name,
-				Annotations: map[string]string{"auth.cattle.io/principal-display-name": displayName},
-				Labels: map[string]string{
-					AuthRoleBindingLabel:       user.IamOpenID,
-					AuthGlobalRoleBindingLabel: "true",
-				},
-			},
-			UserPrincipalName: Name + "_user://" + user.IamOpenID,
-			RoleTemplateName:  role,
-		})
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return err
-		}
 	}
 
 	return nil
