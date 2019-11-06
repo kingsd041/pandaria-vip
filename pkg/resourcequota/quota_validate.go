@@ -96,8 +96,8 @@ func prettyPrint(item api.ResourceList) string {
 }
 
 func IsProjectQuotaFitCluster(projects []*v3.Project, cluster *v3.Cluster, id string, projectQuotaLimit *v3.ResourceQuotaLimit) (bool, string, error) {
-	var cpuExceed float64
-	var memoryExceed float64
+	cpuExceed := -1.0
+	memoryExceed := -1.0
 	if val, ok := cluster.Labels[clusterQuotaCPUExceedLabel]; ok {
 		val64, err := strconv.ParseFloat(val, 64)
 		if err != nil {
@@ -244,25 +244,35 @@ func convertLimitToResourceList(limit *v3.ResourceQuotaLimit, cpuExceed, memoryE
 		if err != nil {
 			return nil, err
 		}
-		if key == "limitsCpu" && cpuExceed > 0 {
-			val64 := cpuExceed * float64(q.MilliValue())
-			q, err = resource.ParseQuantity(fmt.Sprintf("%fm", val64))
-			if err != nil {
-				return nil, err
+		if key == "limitsCpu" {
+			if cpuExceed == 0 {
+				continue
+			}
+			if cpuExceed > 0 {
+				val64 := cpuExceed * float64(q.MilliValue())
+				q, err = resource.ParseQuantity(fmt.Sprintf("%fm", val64))
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-		if key == "limitsMemory" && memoryExceed > 0 {
-			baseValue, unit, err := convertMemoryQuota(q.String())
-			if err != nil {
-				return nil, err
+		if key == "limitsMemory" {
+			if memoryExceed == 0 {
+				continue
 			}
-			val64 := memoryExceed * float64(q.Value())
-			if baseValue != 0 {
-				val64 = val64 / baseValue
-			}
-			q, err = resource.ParseQuantity(fmt.Sprintf("%v%s", val64, unit))
-			if err != nil {
-				return nil, err
+			if memoryExceed > 0 {
+				baseValue, unit, err := convertMemoryQuota(q.String())
+				if err != nil {
+					return nil, err
+				}
+				val64 := memoryExceed * float64(q.Value())
+				if baseValue != 0 {
+					val64 = val64 / baseValue
+				}
+				q, err = resource.ParseQuantity(fmt.Sprintf("%f%s", val64, unit))
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		toReturn[api.ResourceName(key)] = q
