@@ -246,7 +246,7 @@ func convertLimitToResourceList(limit *v3.ResourceQuotaLimit, cpuExceed, memoryE
 		}
 		if key == "limitsCpu" && cpuExceed > 0 {
 			val64 := cpuExceed * float64(q.MilliValue())
-			q, err = resource.ParseQuantity(fmt.Sprintf("%vm", val64))
+			q, err = resource.ParseQuantity(fmt.Sprintf("%fm", val64))
 			if err != nil {
 				return nil, err
 			}
