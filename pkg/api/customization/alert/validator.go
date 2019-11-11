@@ -2,6 +2,7 @@ package alert
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rancher/norman/api/access"
 	"github.com/rancher/norman/httperror"
@@ -51,25 +52,32 @@ func ClusterAlertRuleValidator(resquest *types.APIContext, schema *types.Schema,
 
 func ProjectAlertRuleValidator(resquest *types.APIContext, schema *types.Schema, data map[string]interface{}) error {
 	projectID := data["projectId"].(string)
+	ids := strings.Split(projectID, ":")
+	if len(ids) != 2 {
+		return fmt.Errorf("Invalid projectID: %s", projectID)
+	}
 
+	clusterID := ids[0]
+	// validate for cluster monitor
 	var spec v3.ProjectAlertRuleSpec
 	if err := convert.ToObj(data, &spec); err != nil {
 		return httperror.NewAPIError(httperror.InvalidBodyContent, fmt.Sprintf("%v", err))
 	}
 
 	if spec.MetricRule != nil {
-		project := &v3client.Project{}
-		if err := access.ByID(resquest, resquest.Version, v3client.ProjectType, projectID, project); err != nil {
-			return fmt.Errorf("access project by id failed, %v", err)
+		var cluster v3client.Cluster
+		if err := access.ByID(resquest, resquest.Version, v3client.ClusterType, clusterID, &cluster); err != nil {
+			return err
 		}
-		if project.Conditions != nil {
-			for _, v := range project.Conditions {
+
+		if cluster.Conditions != nil {
+			for _, v := range cluster.Conditions {
 				if v.Type == monitoringEnabled && v.Status == "True" {
 					return nil
 				}
 			}
 		}
-		return fmt.Errorf("if you want to use metric alert, need to enable monitoring for project %s", projectID)
+		return fmt.Errorf("if you want to use metric alert, need to enable monitoring for cluster %s", clusterID)
 	}
 
 	return nil

@@ -450,6 +450,7 @@ func (l *ProjectLifecycle) Create(obj *v3.Project) (runtime.Object, error) {
 		logrus.Warnf("Failed to create precan rules for %s: %v", name, err)
 	}
 
+	// for SAIC
 	name = "memory-close-to-resource-limited"
 	rule = &v3.ProjectAlertRule{
 		ObjectMeta: metav1.ObjectMeta{
@@ -466,10 +467,42 @@ func (l *ProjectLifecycle) Create(obj *v3.Project) (runtime.Object, error) {
 			},
 			MetricRule: &v3.MetricRule{
 				Description:    "Container using memory close to the quota",
-				Expression:     `sum(container_memory_working_set_bytes) by (pod_name, container_name) / sum(label_join(label_join(kube_pod_container_resource_limits_memory_bytes,"pod_name", "", "pod"),"container_name", "", "container")) by (pod_name, container_name)`,
+				Expression:     `sum(container_memory_working_set_bytes) by (pod_name, container_name) / sum(label_join(label_join(kube_pod_container_resource_limits_memory_bytes * on(namespace) group_left kube_namespace_labels{label_field_cattle_io_projectId="` + obj.Name + `","pod_name", "", "pod"),"container_name", "", "container")) by (pod_name, container_name)`,
 				Comparison:     manager.ComparisonGreaterThan,
-				Duration:       "3m",
-				ThresholdValue: 1,
+				Duration:       "5m",
+				ThresholdValue: 0.8,
+			},
+		},
+		Status: v3.AlertStatus{
+			AlertState: "active",
+		},
+	}
+
+	if _, err := l.projectAlertRules.Create(rule); err != nil && !apierrors.IsAlreadyExists(err) {
+		logrus.Warnf("Failed to create precan rules for %s: %v", name, err)
+	}
+
+	// for SAIC
+	name = "cpu-close-to-resource-limited"
+	rule = &v3.ProjectAlertRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: projectName,
+		},
+		Spec: v3.ProjectAlertRuleSpec{
+			ProjectName: projectID,
+			GroupName:   common.GetGroupID(projectName, group.Name),
+			CommonRuleField: v3.CommonRuleField{
+				Severity:    SeverityWarning,
+				DisplayName: "CPU usage close to the quota",
+				TimingField: defaultTimingField,
+			},
+			MetricRule: &v3.MetricRule{
+				Description:    "Container using cpu close to the quota",
+				Expression:     `sum(container_cpu_usage_seconds_total) by (pod_name, container_name) / (sum(label_join(label_join(kube_pod_container_resource_limits_cpu_cores * on(namespace) group_left kube_namespace_labels{label_field_cattle_io_projectId="` + obj.Name + `"},"pod_name", "", "pod"),"container_name", "", "container")) by (pod_name, container_name) * 1000)`,
+				Comparison:     manager.ComparisonGreaterThan,
+				Duration:       "5m",
+				ThresholdValue: 0.8,
 			},
 		},
 		Status: v3.AlertStatus{
