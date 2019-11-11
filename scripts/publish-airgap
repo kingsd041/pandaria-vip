@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+source $(dirname $0)/version
+
+ARCH=${ARCH:-"amd64"}
+SUFFIX=""
+SYSTEM_CHART_DEFAULT_BRANCH=${SYSTEM_CHART_DEFAULT_BRANCH:-"release-v2.2"}
+[ "${ARCH}" != "amd64" ] && SUFFIX="_${ARCH}"
+
+TAG=${TAG:-${VERSION}${SUFFIX}}
+REPO=${REPO:-rancher}
+
+if echo $TAG | grep -q dirty; then
+    TAG=dev
+fi
+
+if [ -n "$DRONE_TAG" ]; then
+    TAG=$DRONE_TAG
+fi
+
+cd $(dirname $0)/../bin
+echo 'export rancher-images'
+
+IMAGE=${REPO}/rancher:${TAG}
+AGENT_IMAGE=${REPO}/rancher-agent:${TAG}
+
+mkdir -p /tmp/system-charts && git clone --branch $SYSTEM_CHART_DEFAULT_BRANCH https://github.com/rancher/system-charts /tmp/system-charts
+TAG=$TAG REPO=${REPO} go run ../pkg/image/export/main.go /tmp/system-charts $IMAGE $AGENT_IMAGE
+
+echo 'Download pandaria images'
+
+# download pandaria image list for airgap
+export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-auditlog-server/releases/tags/${AUDITLOG_SERVER_VERSION} | jq '.assets[]  | select(.name == "images.txt") | .id')
+curl -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/pandaria-auditlog-server/releases/assets/$ASSET_ID -o auditlog-images.txt
+
+export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-auditlog-fluentbit/releases/tags/${AUDITLOG_FLUENTBIT_VERSION} | jq '.assets[]  | select(.name == "images.txt") | .id')
+curl -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/pandaria-auditlog-fluentbit/releases/assets/$ASSET_ID -o fluentbit-images.txt
+
+curl -sL https://pandaria-release.s3-ap-northeast-1.amazonaws.com/network-controller/${MACVLAN_NETWORK_ADDON_VERSION}/images.txt -o macvlan-images.txt
+cat auditlog-images.txt fluentbit-images.txt macvlan-images.txt rancher-images.txt | sed 's/[ ][ ]*//g' > merge-images.txt
+
+# rename file
+mv merge-images.txt rancher-images.txt

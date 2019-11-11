@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "-- chart/copy --"
+
+cd $(dirname $0)/..
+. ./version
+
+# A Promotion is from Latest to Stable.
+if [[ -z "${DRONE_TAG}" ]]; then
+    echo "We can only promote Tags from the 'latest' chart repo to 'stable'"
+    exit 1
+fi
+
+if [[ "${CHART_REPO}" != "latest" ]]; then
+    echo "We can only promote Tags from the 'latest' chart repo to 'stable'"
+    exit 1
+fi
+
+# Remove any existing charts.
+rm -rf ../bin/chart
+
+mkdir -p ../bin/chart/stable
+
+curl -f http://pandaria-releases.cnrancher.com/server-charts/latest/rancher-${CHART_VERSION}.tgz -o ../bin/chart/stable/rancher-${CHART_VERSION}.tgz
+
+./chart/index stable

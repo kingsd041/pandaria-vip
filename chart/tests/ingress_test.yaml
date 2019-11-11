@@ -18,6 +18,7 @@ tests:
   - equal:
       path: metadata.annotations
       value:
+        field.cattle.io/rancher-server-ingress: "true"
         certmanager.k8s.io/issuer: RELEASE-NAME-rancher
         nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
         nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
@@ -30,6 +31,7 @@ tests:
   - equal:
       path: metadata.annotations
       value:
+        field.cattle.io/rancher-server-ingress: "true"
         certmanager.k8s.io/issuer: RELEASE-NAME-rancher
         nginx.ingress.kubernetes.io/proxy-connect-timeout: "15"
         nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
@@ -57,6 +59,7 @@ tests:
   - equal:
       path: metadata.annotations
       value:
+        field.cattle.io/rancher-server-ingress: "true"
         certmanager.k8s.io/issuer: RELEASE-NAME-rancher
         nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
         nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
@@ -74,6 +77,7 @@ tests:
   - equal:
       path: metadata.annotations
       value:
+        field.cattle.io/rancher-server-ingress: "true"
         certmanager.k8s.io/issuer: RELEASE-NAME-rancher
         nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
         nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"

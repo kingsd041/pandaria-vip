@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+cd $(dirname $0)/../
+
+macvlan_version_dapper=$(grep MACVLAN_NETWORK_ADDON_VERSION= Dockerfile_pandaria.dapper | sed 's/[ ]*//g' | sed 's/[MACVLAN_NETWORK_ADDON_VERSION=]*//g' | sed 's/[\]*//g')
+
+echo $macvlan_version_dapper
+
+macvlan_version_dockerfile=$(grep MACVLAN_NETWORK_ADDON_VERSION= package/Dockerfile.pandaria | sed 's/[ ]*//g' | sed 's/[MACVLAN_NETWORK_ADDON_VERSION=]*//g')
+
+echo $macvlan_version_dockerfile
+
+if [[ "$macvlan_version_dapper" != "$macvlan_version_dockerfile" ]]; then
+  echo "MACVLAN_NETWORK_ADDON_VERSION is not equal in Dockerfile_pandaria.dapper and package/Dockerfile.pandaria"
+  exit 1
+fi
+
+echo "Finish check version"

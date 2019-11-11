@@ -276,7 +276,7 @@ func (c *ClusterLifecycleCleanup) createCleanupJob(userContext *config.UserConte
 									Value: "true",
 								},
 							},
-							ImagePullPolicy: coreV1.PullAlways,
+							ImagePullPolicy: coreV1.PullIfNotPresent,
 						},
 					},
 					RestartPolicy: "OnFailure",

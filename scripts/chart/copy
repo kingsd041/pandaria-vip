@@ -23,6 +23,6 @@ rm -rf ../bin/chart
 
 mkdir -p ../bin/chart/stable
 
-curl -f -H 'Cache-Control: max-age=0,no-cache' -H 'Host: releases.rancher.com' "https://c.storage.googleapis.com/server-charts/latest/rancher-${CHART_VERSION}.tgz?$(date +%s%N)" -o ../bin/chart/stable/rancher-${CHART_VERSION}.tgz
+curl -f http://pandaria-releases.cnrancher.com/server-charts/latest/rancher-${CHART_VERSION}.tgz -o ../bin/chart/stable/rancher-${CHART_VERSION}.tgz
 
 ./chart/index stable

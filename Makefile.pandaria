@@ -1,0 +1,44 @@
+TARGETS := $(shell ls scripts)
+THIS_FILE := $(lastword $(MAKEFILE_LIST))
+DAPPER_PANDARIA := Dockerfile_pandaria.dapper
+
+.dapper:
+	@echo Downloading dapper
+	@curl -sL https://releases.rancher.com/dapper/latest/dapper-`uname -s`-`uname -m` > .dapper.tmp
+	@@chmod +x .dapper.tmp
+	@./.dapper.tmp -v
+	@mv .dapper.tmp .dapper
+
+prepare:
+	rm -rf vendor/github.com/rancher/types/*
+	cp -r .vendor_pandaria/github.com/rancher/types/* vendor/github.com/rancher/types/
+	cp chart-pandaria/values.yaml chart/values.yaml
+	cp chart-pandaria/Chart.yaml chart/Chart.yaml
+	cp chart-pandaria/templates/* chart/templates/
+	cp package/Dockerfile.pandaria package/Dockerfile
+	cp package/Dockerfile_pandaria.agent package/Dockerfile.agent
+	cp scripts/chart-pandaria/copy scripts/chart/copy
+	cp scripts/chart-pandaria/index scripts/chart/index
+
+reset:
+	git checkout package/Dockerfile package/Dockerfile.agent vendor/ chart/ scripts/
+	git clean -dxf vendor/ chart/ scripts/
+
+$(TARGETS): .dapper prepare
+	./.dapper -f $(DAPPER_PANDARIA) $@
+	$(MAKE) -f $(THIS_FILE) reset
+
+trash: .dapper
+	./.dapper -f $(DAPPER_PANDARIA) -m bind trash -f vendor_pandaria.conf -T .vendor_pandaria
+
+trash-keep: .dapper
+	./.dapper -f $(DAPPER_PANDARIA) -m bind trash -k -f vendor_pandaria.conf -T .vendor_pandaria
+
+deps: trash
+
+shell-bind: .dapper
+	./.dapper -f $(DAPPER_PANDARIA) -m bind -s
+
+.DEFAULT_GOAL := ci
+
+.PHONY: $(TARGETS)
