@@ -129,7 +129,7 @@ func NewAuditlogProxy(prefix string, validHosts Supplier, scaledContext *config.
 						if userID != "" {
 							for _, user := range userList.Items {
 								if user.Name == userID {
-									if userID == user.Username && user.DisplayName != "" {
+									if user.DisplayName != "" {
 										username = user.DisplayName
 									} else {
 										username = user.Username
