@@ -2,22 +2,18 @@ package workload
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/rancher/norman/types/convert"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"fmt"
-
-	"encoding/json"
-
-	"github.com/rancher/types/apis/apps/v1beta2"
+	v1beta2 "github.com/rancher/types/apis/apps/v1beta2"
 	batchv1 "github.com/rancher/types/apis/batch/v1"
 	"github.com/rancher/types/apis/batch/v1beta1"
 	v1 "github.com/rancher/types/apis/core/v1"
 	"github.com/rancher/types/config"
+
 	corev1beta2 "k8s.io/api/apps/v1beta2"
 	corebatchv1 "k8s.io/api/batch/v1"
 	corebatchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -25,6 +21,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -574,7 +571,10 @@ func generateServicesFromPortsAnnotation(workload *Workload) ([]Service, error) 
 				continue
 			}
 			svcType := corev1.ServiceType(port.Kind)
-			svcTypeToPort[svcType] = append(svcTypeToPort[svcType], port)
+			// SAIC: remove repeat container port due to different port kind
+			if !isExistingPort(port, svcTypeToPort[svcType]) {
+				svcTypeToPort[svcType] = append(svcTypeToPort[svcType], port)
+			}
 		}
 	}
 
@@ -628,6 +628,17 @@ func generateServicesFromPortsAnnotation(workload *Workload) ([]Service, error) 
 	}
 
 	return services, nil
+}
+
+func isExistingPort(cp ContainerPort, existPorts []ContainerPort) bool {
+	for _, ep := range existPorts {
+		if ep.ContainerPort == cp.ContainerPort &&
+			ep.Kind == cp.Kind && ep.SourcePort == cp.SourcePort &&
+			ep.Protocol == cp.Protocol {
+			return true
+		}
+	}
+	return false
 }
 
 func getWorkloadID(objectType string, namespace string, name string) string {
