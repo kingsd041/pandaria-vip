@@ -68,10 +68,13 @@ type ssoProvider struct {
 
 type SAICLoginError struct {
 	TenantLoginFailedClusters string
+	Code                      string
+	Message                   string
 }
 
 func (e *SAICLoginError) Error() string {
-	return fmt.Sprintf(e.TenantLoginFailedClusters)
+	errorMsg, _ := json.Marshal(e)
+	return fmt.Sprintf(string(errorMsg))
 }
 
 func Configure(
@@ -155,14 +158,13 @@ func (sp *ssoProvider) loginUser(login *v3public.SSOLogin, config *v3.SSOConfig,
 	} else if login.SAICAutoLogin {
 		var user DUser
 		amClient := newAMClient(login.Jwt, login.Digest, login.Region, sp.ssoClient.httpClient)
-		user, err = amClient.GetUserInfo()
+		user, err = amClient.GetUserByDigest()
 		if err != nil {
-			err = errors.Wrapf(err, "failed to get user info with digest %s, region %s, cluster key %s", login.Digest, login.Region, login.RegionClusterKeyName)
 			logrus.Error(err)
 			return userPrincipal, groupPrincipals, accessToken, err
 		}
 		user.Jwt = login.Jwt
-		result, err := amClient.GetUserRoleFromAM()
+		result, err := amClient.GetUserRoleFromAMHost()
 		if err != nil {
 			return userPrincipal, groupPrincipals, accessToken, err
 		}

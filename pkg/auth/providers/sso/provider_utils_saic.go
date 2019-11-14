@@ -111,7 +111,7 @@ func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, 
 			logrus.Errorf("convert failed cluster list %v error: %v", failedClusters, e)
 			return nil, e
 		}
-		return clusterList, &SAICLoginError{string(result)}
+		return clusterList, &SAICLoginError{TenantLoginFailedClusters: string(result), Code: "00000", Message: ""}
 	}
 
 	return clusterList, nil

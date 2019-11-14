@@ -64,7 +64,7 @@ func (h *loginHandler) login(actionName string, action *types.Action, request *t
 	token, responseType, err := h.createLoginToken(request)
 	if err != nil {
 		// SAIC: check error for save login failed cookies
-		_, isSAICSSOError := err.(*sso.SAICLoginError)
+		saicError, isSAICSSOError := err.(*sso.SAICLoginError)
 		if !isSAICSSOError {
 			// if user fails to authenticate, hide the details of the exact error. bad credentials will already be APIErrors
 			// otherwise, return a generic error message
@@ -72,6 +72,12 @@ func (h *loginHandler) login(actionName string, action *types.Action, request *t
 				return err
 			}
 			return httperror.WrapAPIError(err, httperror.ServerError, "Server error while authenticating")
+		}
+		// SAIC: check code not health, write response
+		if saicError.Code != "00000" {
+			result, _ := json.Marshal(err)
+			w.Write(result)
+			return nil
 		}
 	}
 
@@ -198,8 +204,11 @@ func (h *loginHandler) createLoginToken(request *types.APIContext) (v3.Token, st
 		}
 
 		// SAIC: check error for save login failed cookies
-		_, isSAICSSOError := err.(*sso.SAICLoginError)
+		saicError, isSAICSSOError := err.(*sso.SAICLoginError)
 		if !isSAICSSOError {
+			return v3.Token{}, "", err
+		}
+		if saicError.Code != "00000" {
 			return v3.Token{}, "", err
 		}
 	}

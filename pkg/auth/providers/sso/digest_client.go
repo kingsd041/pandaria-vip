@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rancher/rancher/pkg/settings"
+	"github.com/sirupsen/logrus"
 )
 
 type amClient struct {
@@ -108,6 +109,27 @@ func (c *amClient) GetUserInfo() (DUser, error) {
 	return DUser{}, nil
 }
 
+func (c *amClient) GetUserByDigest() (DUser, error) {
+	var tmp UserInfoResponse
+	url := fmt.Sprintf("%s/v1/digest/%s", c.endpoint, c.digest)
+	resp, err := call(c.httpClient, http.MethodGet, url, nil, &tmp)
+	if err != nil {
+		return DUser{}, errors.Wrapf(err, "failed to get digest info from %s", url)
+	}
+	defer resp.Body.Close()
+	respData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return DUser{}, errors.Wrapf(err, "GetUserByDigest: failed to read http response data")
+	}
+	if !responseSuccess(resp) {
+		return DUser{}, &SAICLoginError{TenantLoginFailedClusters: "", Code: tmp.Code, Message: string(respData)}
+	}
+	if tmp.UserInfo != nil {
+		return tmp.UserInfo.ToDUser(), nil
+	}
+	return DUser{}, nil
+}
+
 func (c *amClient) GetUserRoleFromAM() (*TenantActions, error) {
 	url := fmt.Sprintf("%s/v1/csp/actions", c.endpoint)
 	input := TenantActionInput{
@@ -127,6 +149,31 @@ func (c *amClient) GetUserRoleFromAM() (*TenantActions, error) {
 	}
 	if !responseSuccess(resp) {
 		return nil, fmt.Errorf("failed to call API to get iam actions, status code %d, response data %s", resp.StatusCode, string(respData))
+	}
+
+	return output, nil
+}
+
+func (c *amClient) GetUserRoleFromAMHost() (*TenantActions, error) {
+	url := fmt.Sprintf("%s/v1/csp/actions", c.endpoint)
+	input := TenantActionInput{
+		Region:     c.region,
+		ServiceKey: settings.SaicServiceKeyName.Get(),
+		Digest:     c.digest,
+	}
+	output := &TenantActions{}
+	resp, err := call(c.httpClient, http.MethodPost, url, input, output)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get response from request %s %+v", url, input)
+	}
+	defer resp.Body.Close()
+	respData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read http response data")
+	}
+	if !responseSuccess(resp) {
+		logrus.Errorf("failed to call API to get iam actions, status code %d, response data %s", resp.StatusCode, string(respData))
+		return nil, &SAICLoginError{TenantLoginFailedClusters: "", Code: output.Code, Message: string(respData)}
 	}
 
 	return output, nil
