@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rancher/rancher/pkg/ref"
-
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/rancher/pkg/controllers/user/alert/configsyncer"
 	"github.com/rancher/rancher/pkg/controllers/user/alert/deployer"
@@ -13,8 +11,10 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/user/alert/statesyncer"
 	"github.com/rancher/rancher/pkg/controllers/user/alert/watcher"
 	monitorutil "github.com/rancher/rancher/pkg/monitoring"
+	"github.com/rancher/rancher/pkg/ref"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	"github.com/rancher/types/config"
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -196,6 +196,14 @@ func (l *alertGroupCleaner) Clean(clusterGroup *v3.ClusterAlertGroup, projectGro
 			if err := l.operatorCRDManager.DeletePrometheusRule(namespace, projectName); err != nil {
 				return err
 			}
+
+			// SAIC: Remove prometheus crd from cluster monitoring
+			_, namespace = monitorutil.ClusterMonitoringInfo()
+			logrus.Infof("Remove prometheus rules on cluster %s, namespace %s, name %s", l.clusterName, namespace, projectName)
+			if err := l.operatorCRDManager.DeletePrometheusRule(namespace, projectName); err != nil {
+				return err
+			}
+			// SAIC: end
 		}
 
 	}
