@@ -467,7 +467,7 @@ func (l *ProjectLifecycle) Create(obj *v3.Project) (runtime.Object, error) {
 			},
 			MetricRule: &v3.MetricRule{
 				Description:    "Container using memory close to the quota",
-				Expression:     `sum(container_memory_working_set_bytes) by (pod_name, container_name) / sum(label_join(label_join(kube_pod_container_resource_limits_memory_bytes * on(namespace) group_left kube_namespace_labels{label_field_cattle_io_projectId="` + obj.Name + `","pod_name", "", "pod"),"container_name", "", "container")) by (pod_name, container_name)`,
+				Expression:     `sum(container_memory_working_set_bytes) by (pod_name, container_name) / sum(label_join(label_join(kube_pod_container_resource_limits_memory_bytes * on(namespace) group_left kube_namespace_labels{label_field_cattle_io_projectId="` + obj.Name + `"},"pod_name", "", "pod"),"container_name", "", "container")) by (pod_name, container_name)`,
 				Comparison:     manager.ComparisonGreaterThan,
 				Duration:       "5m",
 				ThresholdValue: 0.8,
