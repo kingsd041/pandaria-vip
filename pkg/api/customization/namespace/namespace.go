@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/pkg/errors"
@@ -13,6 +14,7 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/user/helm"
 	"github.com/rancher/rancher/pkg/ref"
 	"github.com/rancher/types/apis/cluster.cattle.io/v3/schema"
+	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	client "github.com/rancher/types/client/cluster/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,18 +80,7 @@ func (w ActionWrapper) ActionHandler(actionName string, action *types.Action, ap
 			}
 			return httperror.NewAPIError(httperror.NotFound, err.Error())
 		}
-		// SAIC: Add tenantID for namespace
-		var tenantID string
-		if projectID != "" {
-			project, err := userContext.Management.Management.Projects(clusterID).Get(projectID, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			if project.Spec.ResourceQuota != nil {
-				return errors.Errorf("can't move namespace. Project %s has resource quota set", project.Spec.DisplayName)
-			}
-			tenantID = project.Labels["tenant-id"]
-		}
+
 		nsClient := userContext.Core.Namespaces("")
 		ns, err := nsClient.Get(apiContext.ID, metav1.GetOptions{})
 		if err != nil {
@@ -98,22 +89,58 @@ func (w ActionWrapper) ActionHandler(actionName string, action *types.Action, ap
 			}
 			return httperror.NewAPIError(httperror.NotFound, err.Error())
 		}
-		if ns.Annotations[helm.AppIDsLabel] != "" {
+		updateNS := ns.DeepCopy()
+		// for pandaria
+		delete(updateNS.Annotations, resourceQuotaAnnotation)
+		delete(updateNS.Annotations, limitRangeAnnotation)
+		// SAIC: Add tenantID for namespace
+		var tenantID string
+		nsQuota := &v3.NamespaceResourceQuota{}
+		if projectID != "" {
+			project, err := userContext.Management.Management.Projects(clusterID).Get(projectID, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			if project.Spec.ResourceQuota != nil {
+				// SAIC: Add project resource quota to ns
+				projectQuotaLimit := project.Spec.ResourceQuota.Limit
+				nsQuotaLimit := &v3.ResourceQuotaLimit{}
+				projectQuotaLimitMap, err := convert.EncodeToMap(projectQuotaLimit)
+				if err != nil {
+					return err
+				}
+				nsQuotaLimitMap := map[string]string{}
+				for quotaKey := range projectQuotaLimitMap {
+					nsQuotaLimitMap[quotaKey] = "0"
+				}
+				err = convert.ToObj(nsQuotaLimitMap, nsQuotaLimit)
+				if err != nil {
+					return err
+				}
+				nsQuota.Limit = *nsQuotaLimit
+				bytes, err := json.Marshal(nsQuota)
+				if err != nil {
+					return err
+				}
+				quotaToUpdate := string(bytes)
+				updateNS.Annotations[resourceQuotaAnnotation] = quotaToUpdate
+			}
+			tenantID = project.Labels["tenant-id"]
+		}
+
+		if updateNS.Annotations[helm.AppIDsLabel] != "" {
 			return errors.New("namespace is currently being used")
 		}
 		if projectID == "" {
-			delete(ns.Annotations, projectIDFieldLabel)
+			delete(updateNS.Annotations, projectIDFieldLabel)
 		} else {
-			ns.Annotations[projectIDFieldLabel] = convert.ToString(actionInput["projectId"])
+			updateNS.Annotations[projectIDFieldLabel] = convert.ToString(actionInput["projectId"])
 			// SAIC: Add tenantID for namespace
 			if tenantID != "" {
-				ns.Labels[TenantNamespaceLabel] = tenantID
+				updateNS.Labels[TenantNamespaceLabel] = tenantID
 			}
 		}
-		// for pandaria
-		delete(ns.Annotations, resourceQuotaAnnotation)
-		delete(ns.Annotations, limitRangeAnnotation)
-		if _, err := nsClient.Update(ns); err != nil {
+		if _, err := nsClient.Update(updateNS); err != nil {
 			return err
 		}
 	default:
