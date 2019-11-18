@@ -20,8 +20,10 @@ import (
 )
 
 var (
-	projectIDFieldLabel = "field.cattle.io/projectId"
-	namespaceOwnerMap   = cache.NewLRUExpireCache(1000)
+	projectIDFieldLabel     = "field.cattle.io/projectId"
+	namespaceOwnerMap       = cache.NewLRUExpireCache(1000)
+	resourceQuotaAnnotation = "field.cattle.io/resourceQuota"
+	limitRangeAnnotation    = "field.cattle.io/containerDefaultResourceLimit"
 )
 
 func updateNamespaceOwnerMap(apiContext *types.APIContext) error {
@@ -100,6 +102,9 @@ func (w ActionWrapper) ActionHandler(actionName string, action *types.Action, ap
 		} else {
 			ns.Annotations[projectIDFieldLabel] = convert.ToString(actionInput["projectId"])
 		}
+		// for pandaria
+		delete(ns.Annotations, resourceQuotaAnnotation)
+		delete(ns.Annotations, limitRangeAnnotation)
 		if _, err := nsClient.Update(ns); err != nil {
 			return err
 		}
