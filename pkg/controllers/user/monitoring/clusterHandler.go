@@ -134,6 +134,10 @@ func (ch *clusterHandler) doSync(cluster *mgmtv3.Cluster) error {
 			//PANDARIA: Add GPU Monitoring
 			if enabledGPUMonitoring == "true" {
 				ch.deployGPUMetrics(cluster)
+			} else {
+				if err := ch.withdrawGPUMetrics(cluster); err != nil {
+					return nil, errors.Wrap(err, "failed to withdraw gpu monitoring metrics")
+				}
 			}
 			return status, ch.deployMetrics(cluster)
 		})
@@ -159,17 +163,15 @@ func (ch *clusterHandler) doSync(cluster *mgmtv3.Cluster) error {
 		}
 
 		//PANDARIA: Add GPU Monitoring
-		if enabledGPUMonitoring == "true" {
-			if err := ch.app.withdrawApp(cluster.Name, gpuAppName, appTargetNamespace); err != nil {
-				mgmtv3.ClusterConditionMonitoringEnabled.Unknown(cluster)
-				mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, err.Error())
-				return errors.Wrap(err, "failed to withdraw gpu monitoring")
-			}
-			if err := ch.withdrawGPUMetrics(cluster); err != nil {
-				mgmtv3.ClusterConditionMonitoringEnabled.Unknown(cluster)
-				mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, err.Error())
-				return errors.Wrap(err, "failed to withdraw gpu monitoring metrics")
-			}
+		if err := ch.app.withdrawApp(cluster.Name, gpuAppName, appTargetNamespace); err != nil {
+			mgmtv3.ClusterConditionMonitoringEnabled.Unknown(cluster)
+			mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, err.Error())
+			return errors.Wrap(err, "failed to withdraw gpu monitoring")
+		}
+		if err := ch.withdrawGPUMetrics(cluster); err != nil {
+			mgmtv3.ClusterConditionMonitoringEnabled.Unknown(cluster)
+			mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, err.Error())
+			return errors.Wrap(err, "failed to withdraw gpu monitoring metrics")
 		}
 
 		mgmtv3.ClusterConditionMonitoringEnabled.False(cluster)
@@ -423,6 +425,10 @@ func (ch *clusterHandler) deployApp(appName, appTargetNamespace string, appProje
 		_, err = monitoring.DeployApp(ch.app.cattleAppClient, appDeployProjectID, gpuApp, false)
 		if err != nil {
 			return nil, err
+		}
+	} else {
+		if err := ch.app.withdrawApp(cluster.Name, gpuAppName, appTargetNamespace); err != nil {
+			return nil, errors.Wrap(err, "failed to withdraw gpu monitoring")
 		}
 	}
 

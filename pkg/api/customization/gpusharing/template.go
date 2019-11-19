@@ -28,8 +28,7 @@ func TemplateHandler(resp http.ResponseWriter, req *http.Request) {
 }
 
 var (
-	schedulerPolicyConfig = `
-{
+	schedulerPolicyConfig = `{
   "kind": "Policy",
   "apiVersion": "v1",
   "extenders": [
