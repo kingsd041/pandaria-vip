@@ -273,6 +273,7 @@ var defaultResourceLimit = &v3.ResourceQuotaLimit{
 	LimitsCPU:              "0",
 	LimitsMemory:           "0",
 	RequestsGPUMemory:      "0",
+	RequestsGPUCount:       "0",
 }
 
 func (c *SyncController) createDefaultResourceQuota(ns *corev1.Namespace, spec *corev1.ResourceQuotaSpec) error {
