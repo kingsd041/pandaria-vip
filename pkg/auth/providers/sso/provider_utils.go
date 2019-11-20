@@ -29,6 +29,7 @@ const (
 	AuthRoleBindingLabel       = "pandaria.authz.saic.io/IamOpenID"
 	TenantNamespaceLabel       = "tenant.saic.pandaria.io/tenantId"
 	AuthGlobalRoleBindingLabel = "pandaria.authz.saic.io/globalRole"
+	TenantShortNameLabel       = "tenant.saic.pandaria.io/tenantShortName"
 )
 
 var (

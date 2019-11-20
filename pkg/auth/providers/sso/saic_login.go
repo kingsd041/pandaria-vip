@@ -30,10 +30,11 @@ func newSaicAuthManager(mgmt *config.ScaledContext) *SaicAuthManager {
 }
 
 func (sam *SaicAuthManager) ensureGlobalRoleBinding(clusterList []*v3.Cluster, clusterActions map[string][]string, dUser DUser, rUser *v3.User) {
-	logrus.Infof("ensure global role for user %s", dUser.Username)
+	logrus.Infof("ensure global role for user %s, tenant %s", dUser.Username, dUser.TenantShortName)
 	for _, cluster := range clusterList {
 		clusterKeyName := cluster.Labels[RegionClusterKeyNameLabel]
 		if clusterAction, ok := clusterActions[clusterKeyName]; ok {
+			logrus.Infof("ensure global role %s for cluster %s", clusterAction, clusterKeyName)
 			if err := sam.reconcileGlobalRoleBinding(clusterAction, dUser, cluster, rUser); err != nil {
 				logrus.Errorf("fail to ensure global role binding of user %+v, rancher user %+v, error: %s", dUser, rUser, err.Error())
 			}
@@ -50,8 +51,11 @@ func (sam *SaicAuthManager) reconcileGlobalRoleBinding(actions []string, user DU
 			}
 		}
 	}
-	logrus.Infof("login for global role %v", roleList)
-	set := labels.Set(map[string]string{AuthRoleBindingLabel: user.IamOpenID})
+	logrus.Infof("login for global role %v on cluster %s", roleList, cluster.Name)
+	set := labels.Set(map[string]string{
+		AuthRoleBindingLabel: user.IamOpenID,
+		TenantShortNameLabel: user.TenantShortName,
+	})
 	grList, err := sam.grLister.List("", set.AsSelector())
 	if err != nil {
 		return err
@@ -91,7 +95,10 @@ func (sam *SaicAuthManager) reconcileGlobalRoleBinding(actions []string, user DU
 		_, err = sam.grClient.Create(&v3.GlobalRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "globalrolebinding-",
-				Labels:       map[string]string{AuthRoleBindingLabel: user.IamOpenID},
+				Labels: map[string]string{
+					AuthRoleBindingLabel: user.IamOpenID,
+					TenantShortNameLabel: user.TenantShortName,
+				},
 			},
 			GlobalRoleName: role,
 			UserName:       rUser.Name,
@@ -105,19 +112,20 @@ func (sam *SaicAuthManager) reconcileGlobalRoleBinding(actions []string, user DU
 }
 
 func (sam *SaicAuthManager) ensureClusterGlobalRoleBinding(actions []string, cluster *v3.Cluster, user DUser) error {
-	logrus.Infof("ensure cluster global role for %v, user %s", actions, user.Username)
+	logrus.Infof("ensure cluster global role for %v, user %s, cluster %s", actions, user.Username, cluster.Name)
 	set := labels.Set(map[string]string{
 		AuthRoleBindingLabel:       user.IamOpenID,
+		TenantShortNameLabel:       user.TenantShortName,
 		AuthGlobalRoleBindingLabel: "true",
 	})
-	crtbList, err := sam.crtbLister.List("", set.AsSelector())
+	crtbList, err := sam.crtbLister.List(cluster.Name, set.AsSelector())
 	if err != nil {
 		return err
 	}
 
 	deleteRolebinding := []*v3.ClusterRoleTemplateBinding{}
 	for _, crtb := range crtbList {
-		logrus.Infof("get exist cluster global role binding %s for role %s", crtb.Name, crtb.RoleTemplateName)
+		logrus.Infof("get exist cluster role template binding %s for role %s, cluster %s", crtb.Name, crtb.RoleTemplateName, cluster.Name)
 		if !slice.ContainsString(actions, crtb.RoleTemplateName) {
 			deleteRolebinding = append(deleteRolebinding, crtb)
 		}
@@ -150,7 +158,7 @@ func (sam *SaicAuthManager) ensureClusterGlobalRoleBinding(actions []string, clu
 		if displayName == "" {
 			displayName = user.IamOpenID
 		}
-		logrus.Infof("create new glolab role %s for cluster %s", role, cluster.Labels["regionClusterKeyName"])
+		logrus.Infof("create new cluster template role %s for cluster %s", role, cluster.Labels["regionClusterKeyName"])
 		_, err = sam.crtbClient.Create(&v3.ClusterRoleTemplateBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-", role),
@@ -158,6 +166,7 @@ func (sam *SaicAuthManager) ensureClusterGlobalRoleBinding(actions []string, clu
 				Annotations:  map[string]string{"auth.cattle.io/principal-display-name": displayName},
 				Labels: map[string]string{
 					AuthRoleBindingLabel:       user.IamOpenID,
+					TenantShortNameLabel:       user.TenantShortName,
 					AuthGlobalRoleBindingLabel: "true",
 				},
 			},

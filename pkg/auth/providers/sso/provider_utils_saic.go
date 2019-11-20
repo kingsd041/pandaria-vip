@@ -71,7 +71,7 @@ func (sp *ssoProvider) GetUserClustersAndProjects(tenantActions *TenantActions, 
 	for _, cluster := range clusterList {
 		clusterKeyName := cluster.Labels[RegionClusterKeyNameLabel]
 		if clusterAction, ok := clusterActions[clusterKeyName]; ok {
-			logrus.Debugf("login for cluster %v with actions %v for user %s", clusterKeyName, clusterAction, user.Username)
+			logrus.Debugf("login for cluster %v with actions %v for tenant %s, user %s", clusterKeyName, clusterAction, user.TenantShortName, user.Username)
 			project, err := sp.checkProjectWithClusterAndUser(cluster, user)
 			if err != nil {
 				failedCluster := TenantLoginFailedCluster{
@@ -172,6 +172,7 @@ func (sp *ssoProvider) isAvailableProject(project *v3.Project, cluster *v3.Clust
 		project.Spec.NamespaceDefaultResourceQuota = &v3.NamespaceResourceQuota{
 			Limit: sp.defaultProjectQuota(),
 		}
+		logrus.Debugf("Before check project: %+v", *project)
 		// check quota
 		err = isQuotaFit(allProjects, cluster, project)
 		if err != nil {
@@ -263,6 +264,7 @@ func (sp *ssoProvider) defaultProjectQuota() v3.ResourceQuotaLimit {
 
 func isQuotaFit(projects []*v3.Project, cluster *v3.Cluster, p *v3.Project) error {
 	projectQuotaLimit := p.Spec.ResourceQuota.Limit
+	logrus.Debugf("check quota before create project with quota: %+v", projectQuotaLimit)
 	// check project quota fit cluster
 	isFit, msg, err := resourcequota.IsProjectQuotaFitCluster(projects, cluster, "", &projectQuotaLimit)
 	if err != nil {
