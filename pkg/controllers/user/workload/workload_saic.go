@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -20,7 +21,11 @@ const (
 )
 
 func (c *Controller) ingressExistsForWorkload(workload *Workload) (*extension.Ingress, error) {
-	i, err := c.ingressLister.Get(workload.Namespace, fmt.Sprintf("%s-ingress", workload.Name))
+	ingressName := workload.Name
+	if strings.EqualFold(workload.Kind, "StatefulSet") {
+		ingressName = fmt.Sprintf("%s-ss", workload.Name)
+	}
+	i, err := c.ingressLister.Get(workload.Namespace, fmt.Sprintf("%s-ingress", ingressName))
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
@@ -88,11 +93,14 @@ func generateIngressRule(workload *Workload, host string) ([]extension.IngressRu
 		if p.Kind == "Http" {
 			// generate ingress rule
 			serviceName := workload.Name
+			if strings.EqualFold(workload.Kind, "StatefulSet") {
+				serviceName = fmt.Sprintf("%s-ss", workload.Name)
+			}
 			if p.ContainerPort != 80 {
 				serviceName = fmt.Sprintf("%s%s", serviceName, strconv.Itoa(int(p.ContainerPort)))
 			}
 			rule := extension.IngressRule{
-				Host: fmt.Sprintf("%s.%s", serviceName, host),
+				Host: fmt.Sprintf("%s.%s.%s", serviceName, workload.Namespace, host),
 				IngressRuleValue: extension.IngressRuleValue{
 					HTTP: &extension.HTTPIngressRuleValue{
 						Paths: []extension.HTTPIngressPath{
@@ -135,11 +143,15 @@ func (c *Controller) createIngress(workload *Workload, ingressRule []extension.I
 	ingressAnnocations[WorkloadAnnotatioNoop] = "true"
 	ingressAnnocations[WorkloaAnnotationdPortBasedService] = "true"
 
+	ingressName := workload.Name
+	if strings.EqualFold(workload.Kind, "StatefulSet") {
+		ingressName = fmt.Sprintf("%s-ss", workload.Name)
+	}
 	ingress := &extension.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{ownerRef},
 			Namespace:       workload.Namespace,
-			Name:            fmt.Sprintf("%s-ingress", workload.Name),
+			Name:            fmt.Sprintf("%s-ingress", ingressName),
 			Annotations:     ingressAnnocations,
 		},
 		Spec: extension.IngressSpec{
