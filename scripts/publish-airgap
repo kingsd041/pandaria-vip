@@ -37,8 +37,14 @@ curl -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet
 export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/pandaria-auditlog-fluentbit/releases/tags/${AUDITLOG_FLUENTBIT_VERSION} | jq '.assets[]  | select(.name == "images.txt") | .id')
 curl -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/pandaria-auditlog-fluentbit/releases/assets/$ASSET_ID -o fluentbit-images.txt
 
+export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/gpu-scheduler-extender/releases/tags/${GPU_SCHEDULER_EXTENDER_VERSION} | jq '.assets[]  | select(.name == "images.txt") | .id')
+curl -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/gpu-scheduler-extender/releases/assets/$ASSET_ID -o gpu-scheduler-extender-images.txt
+
+export ASSET_ID=$(curl -sL -H "Authorization: token $OAUTH_TOKEN" https://api.github.com/repos/cnrancher/gpu-device-plugin/releases/tags/${GPU_DEVICE_PLUGIN_VERSION} | jq '.assets[]  | select(.name == "images.txt") | .id')
+curl -J -sL -H "Authorization: token $OAUTH_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/cnrancher/gpu-device-plugin/releases/assets/$ASSET_ID -o gpu-device-plugin-images.txt
+
 curl -sL https://pandaria-release.s3-ap-northeast-1.amazonaws.com/network-controller/${MACVLAN_NETWORK_ADDON_VERSION}/images.txt -o macvlan-images.txt
-cat auditlog-images.txt fluentbit-images.txt macvlan-images.txt rancher-images.txt | sed 's/[ ][ ]*//g' > merge-images.txt
+cat gpu-device-plugin-images.txt gpu-scheduler-extender-images.txt auditlog-images.txt fluentbit-images.txt macvlan-images.txt rancher-images.txt | sed 's/[ ][ ]*//g' > merge-images.txt
 
 # rename file
 mv merge-images.txt rancher-images.txt
