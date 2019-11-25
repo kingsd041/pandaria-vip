@@ -93,9 +93,6 @@ func generateIngressRule(workload *Workload, host string) ([]extension.IngressRu
 		if p.Kind == "Http" {
 			// generate ingress rule
 			serviceName := workload.Name
-			if strings.EqualFold(workload.Kind, "StatefulSet") {
-				serviceName = fmt.Sprintf("%s-ss", workload.Name)
-			}
 			if p.ContainerPort != 80 {
 				serviceName = fmt.Sprintf("%s%s", serviceName, strconv.Itoa(int(p.ContainerPort)))
 			}
@@ -144,7 +141,7 @@ func (c *Controller) createIngress(workload *Workload, ingressRule []extension.I
 	ingressAnnocations[WorkloaAnnotationdPortBasedService] = "true"
 
 	ingressName := workload.Name
-	if strings.EqualFold(workload.Kind, "StatefulSet") {
+	if strings.EqualFold(strings.ToLower(workload.Kind), "statefulset") {
 		ingressName = fmt.Sprintf("%s-ss", workload.Name)
 	}
 	ingress := &extension.Ingress{
