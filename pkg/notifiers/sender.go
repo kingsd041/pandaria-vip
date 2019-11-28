@@ -20,6 +20,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
+	"github.com/rancher/rancher/pkg/controllers/user/alert/config"
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 )
 
@@ -64,7 +65,7 @@ func SendMessage(notifier *v3.Notifier, recipient string, msg *Message) error {
 		if recipient == "" {
 			recipient = s.DefaultRecipient
 		}
-		return TestWechat(notifier.Spec.WechatConfig.Secret, notifier.Spec.WechatConfig.Agent, notifier.Spec.WechatConfig.Corp, notifier.Spec.WechatConfig.RecipientType, recipient, msg.Content, notifier.Spec.WechatConfig.HTTPClientConfig)
+		return TestWechat(notifier.Spec.WechatConfig.Secret, notifier.Spec.WechatConfig.Agent, notifier.Spec.WechatConfig.Corp, notifier.Spec.WechatConfig.RecipientType, notifier.Spec.WechatConfig.APIURL, recipient, msg.Content, notifier.Spec.WechatConfig.HTTPClientConfig)
 	}
 
 	if notifier.Spec.WebhookConfig != nil {
@@ -114,12 +115,16 @@ func TestPagerduty(key, msg string, cfg *v3.HTTPClientConfig) error {
 	return nil
 }
 
-func TestWechat(secret, agent, corp, receiverType, receiver, msg string, cfg *v3.HTTPClientConfig) error {
+func TestWechat(secret, agent, corp, receiverType, apiURL, receiver, msg string, cfg *v3.HTTPClientConfig) error {
 	if msg == "" {
 		msg = "Wechat setting validated"
 	}
-
-	req, err := http.NewRequest(http.MethodGet, "https://qyapi.weixin.qq.com/cgi-bin/gettoken", nil)
+	if apiURL == "" {
+		apiURL = config.DefaultGlobalConfig.WechatURL
+	} else if !strings.HasSuffix(apiURL, "/") {
+		apiURL = apiURL + "/"
+	}
+	req, err := http.NewRequest(http.MethodGet, apiURL+"gettoken", nil)
 	if err != nil {
 		return err
 	}
@@ -169,9 +174,7 @@ func TestWechat(secret, agent, corp, receiverType, receiver, msg string, cfg *v3
 	default:
 		wc.ToParty = receiver
 	}
-
-	url := "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=" + wechatToken.AccessToken
-
+	url := apiURL + "message/send?access_token=" + wechatToken.AccessToken
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(wc); err != nil {
 		return err

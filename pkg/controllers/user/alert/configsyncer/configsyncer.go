@@ -488,6 +488,7 @@ func (d *ConfigSyncer) addRecipients(notifiers []*v3.Notifier, receiver *alertco
 					AgentID:        notifier.Spec.WechatConfig.Agent,
 					CorpID:         notifier.Spec.WechatConfig.Corp,
 					Message:        `{{ template "wechat.text" . }}`,
+					APIURL:         notifier.Spec.WechatConfig.APIURL,
 				}
 
 				recipient := notifier.Spec.WechatConfig.DefaultRecipient
