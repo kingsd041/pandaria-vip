@@ -42,6 +42,9 @@ import (
 	projectclient "github.com/rancher/types/client/project/v3"
 	"github.com/rancher/types/config"
 	"github.com/rancher/types/factory"
+
+	// pandaria
+	"github.com/rancher/rancher/pkg/controllers/user/harbor"
 )
 
 func Register(ctx context.Context, cluster *config.UserContext, clusterRec *managementv3.Cluster, kubeConfigGetter common.KubeConfigGetter, clusterManager healthsyncer.ClusterControllerLifecycle) error {
@@ -74,6 +77,9 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 
 	// register controller for API
 	cluster.APIAggregation.APIServices("").Controller()
+
+	// Pandaria
+	harbor.Register(ctx, cluster)
 
 	if clusterRec.Spec.LocalClusterAuthEndpoint.Enabled {
 		err := clusterauthtoken.CRDSetup(ctx, cluster.UserOnlyContext())

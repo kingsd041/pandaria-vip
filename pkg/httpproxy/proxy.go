@@ -108,6 +108,12 @@ func (p *proxy) proxy(req *http.Request) error {
 	index := strings.Index(path, p.prefix)
 	destPath := path[index+len(p.prefix):]
 
+	// for pandaria
+	destPath, err := unescapePath(destPath)
+	if err != nil {
+		return err
+	}
+
 	if httpsStart.MatchString(destPath) {
 		destPath = httpsStart.ReplaceAllString(destPath, "https://$1")
 	} else if httpStart.MatchString(destPath) {

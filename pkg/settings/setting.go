@@ -69,6 +69,11 @@ var (
 	InitialDockerRootDir              = NewSetting("initial-docker-root-dir", "/var/lib/docker")
 	SystemCatalog                     = NewSetting("system-catalog", "external") // Options are 'external' or 'bundled'
 	IgnoreNodeName                    = NewSetting("ignore-node-name", "")       // nodes to ignore when syncing v1.node to v3.node
+
+	// Pandaria
+
+	HarborServerURL = NewSetting("harbor-server-url", "")
+	HarborAdminAuth = NewSetting("harbor-admin-auth", "")
 )
 
 func init() {
