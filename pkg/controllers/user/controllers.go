@@ -32,6 +32,8 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/user/resourcequota"
 	"github.com/rancher/rancher/pkg/controllers/user/secret"
 	"github.com/rancher/rancher/pkg/controllers/user/servicemonitor"
+	"github.com/rancher/rancher/pkg/controllers/user/setting"
+	"github.com/rancher/rancher/pkg/controllers/user/settingprovider"
 	"github.com/rancher/rancher/pkg/controllers/user/systemimage"
 	"github.com/rancher/rancher/pkg/controllers/user/targetworkloadservice"
 	"github.com/rancher/rancher/pkg/controllers/user/workload"
@@ -69,9 +71,9 @@ func Register(ctx context.Context, cluster *config.UserContext, clusterRec *mana
 	monitoring.Register(ctx, cluster)
 	harbor.Register(ctx, cluster)
 	certsexpiration.Register(ctx, cluster)
-	ingresshostgen.Register(ctx, cluster.UserOnlyContext())
 	secret.RegisterPandaria(ctx, cluster) // for pandaria
 	gpu.Register(ctx, cluster)            // for pandaria gpu management
+	setting.Register(ctx, cluster)
 
 	if clusterRec.Spec.LocalClusterAuthEndpoint.Enabled {
 		err := clusterauthtoken.CRDSetup(ctx, cluster.UserOnlyContext())
@@ -101,10 +103,18 @@ func RegisterFollower(ctx context.Context, cluster *config.UserContext, kubeConf
 }
 
 func RegisterUserOnly(ctx context.Context, cluster *config.UserOnlyContext) error {
-	if err := createUserClusterCRDs(ctx, cluster); err != nil {
+	err := createUserClusterCRDs(ctx, cluster)
+	if err != nil {
 		return err
 	}
 
+	// Don't register secret powered setting in the local cluster
+	if cluster.ClusterName != setting.LocalClusterName {
+		if err = settingprovider.Register(ctx, cluster); err != nil {
+			return err
+		}
+	}
+	ingresshostgen.Register(ctx, cluster)
 	dnsrecord.Register(ctx, cluster)
 	externalservice.Register(ctx, cluster)
 	ingress.Register(ctx, cluster)
@@ -113,7 +123,6 @@ func RegisterUserOnly(ctx context.Context, cluster *config.UserOnlyContext) erro
 	workload.Register(ctx, cluster)
 	servicemonitor.Register(ctx, cluster)
 	monitoring.RegisterAgent(ctx, cluster)
-
 	return nil
 }
 
