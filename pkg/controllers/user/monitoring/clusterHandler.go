@@ -14,6 +14,7 @@ import (
 	"github.com/rancher/rancher/pkg/monitoring"
 	"github.com/rancher/rancher/pkg/node"
 	"github.com/rancher/rancher/pkg/ref"
+	"github.com/rancher/rancher/pkg/settings"
 	"github.com/rancher/rke/pki"
 	corev1 "github.com/rancher/types/apis/core/v1"
 	mgmtv3 "github.com/rancher/types/apis/management.cattle.io/v3"
@@ -31,6 +32,10 @@ const (
 	controlplane         = "controlplane"
 	windowsNode          = "windowsNode"
 	creatorIDAnno        = "field.cattle.io/creatorId"
+
+	//PANDARIA: Add GPU Monitoring
+	gpuAppName               = "cluster-gpu-monitoring"
+	gpuMonitoringEnabledAnno = "exporter-gpu-node.enabled"
 )
 
 type etcdTLSConfig struct {
@@ -74,6 +79,10 @@ func (ch *clusterHandler) sync(key string, cluster *mgmtv3.Cluster) (runtime.Obj
 
 func (ch *clusterHandler) doSync(cluster *mgmtv3.Cluster) error {
 	appName, appTargetNamespace := monitoring.ClusterMonitoringInfo()
+
+	//PANDARIA: Add GPU Monitoring
+	appAnswersGPU, _ := monitoring.GetOverwroteAppAnswersAndVersion(cluster.Annotations)
+	enabledGPUMonitoring := appAnswersGPU[gpuMonitoringEnabledAnno]
 
 	if cluster.Spec.EnableClusterMonitoring {
 		appProjectName, err := ch.ensureAppProjectName(cluster.Name, appTargetNamespace)
@@ -124,6 +133,14 @@ func (ch *clusterHandler) doSync(cluster *mgmtv3.Cluster) error {
 		cluster.Status.MonitoringStatus.GrafanaEndpoint = fmt.Sprintf("/k8s/clusters/%s/api/v1/namespaces/%s/services/http:access-grafana:80/proxy/", cluster.Name, appTargetNamespace)
 
 		_, err = ConditionMetricExpressionDeployed.DoUntilTrue(cluster.Status.MonitoringStatus, func() (status *mgmtv3.MonitoringStatus, e error) {
+			//PANDARIA: Add GPU Monitoring
+			if enabledGPUMonitoring == "true" {
+				ch.deployGPUMetrics(cluster)
+			} else {
+				if err := ch.withdrawGPUMetrics(cluster); err != nil {
+					return nil, errors.Wrap(err, "failed to withdraw gpu monitoring metrics")
+				}
+			}
 			return status, ch.deployMetrics(cluster)
 		})
 		if err != nil {
@@ -147,6 +164,17 @@ func (ch *clusterHandler) doSync(cluster *mgmtv3.Cluster) error {
 			return errors.Wrap(err, "failed to withdraw monitoring metrics")
 		}
 
+		//PANDARIA: Add GPU Monitoring
+		if err := ch.app.withdrawApp(cluster.Name, gpuAppName, appTargetNamespace); err != nil {
+			mgmtv3.ClusterConditionMonitoringEnabled.Unknown(cluster)
+			mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, err.Error())
+			return errors.Wrap(err, "failed to withdraw gpu monitoring")
+		}
+		if err := ch.withdrawGPUMetrics(cluster); err != nil {
+			mgmtv3.ClusterConditionMonitoringEnabled.Unknown(cluster)
+			mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, err.Error())
+			return errors.Wrap(err, "failed to withdraw gpu monitoring metrics")
+		}
 		mgmtv3.ClusterConditionMonitoringEnabled.False(cluster)
 		mgmtv3.ClusterConditionMonitoringEnabled.Message(cluster, "")
 
@@ -396,6 +424,36 @@ func (ch *clusterHandler) deployApp(appName, appTargetNamespace string, appProje
 	creator, err := ch.app.systemAccountManager.GetSystemUser(ch.clusterName)
 	if err != nil {
 		return nil, err
+	}
+
+	//PANDARIA: Add GPU Monitoring
+	appAnswersGPU, _ := monitoring.GetOverwroteAppAnswersAndVersion(cluster.Annotations)
+	enabledGPUMonitoring := appAnswersGPU[gpuMonitoringEnabledAnno]
+	if enabledGPUMonitoring == "true" {
+		gpuAppCatalogID := settings.SystemGPUMonitoringCatalogID.Get()
+		gpuApp := &v3.App{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{creatorIDAnno: creator.Name},
+				Labels:      monitoring.OwnedLabels(gpuAppName, appTargetNamespace, appProjectName, monitoring.ClusterLevel),
+				Name:        gpuAppName,
+				Namespace:   appDeployProjectID,
+			},
+			Spec: v3.AppSpec{
+				Description:     "Rancher Cluster GPU Monitoring",
+				ExternalID:      gpuAppCatalogID,
+				ProjectName:     appProjectName,
+				TargetNamespace: appTargetNamespace,
+			},
+		}
+
+		_, err = utils.DeployApp(ch.app.cattleAppClient, appDeployProjectID, gpuApp, false)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := ch.app.withdrawApp(cluster.Name, gpuAppName, appTargetNamespace); err != nil {
+			return nil, errors.Wrap(err, "failed to withdraw gpu monitoring")
+		}
 	}
 
 	app := &v3.App{
