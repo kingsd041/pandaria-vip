@@ -138,6 +138,8 @@ func newAuthed(tokenAPI http.Handler, managementAPI http.Handler, k8sproxy http.
 	authed.PathPrefix("/v1-telemetry").Handler(telemetry.NewProxy())
 	authed.PathPrefix(managementSchema.Version.Path).Handler(managementAPI)
 
+	authed.PathPrefix("/meta/auditlog").Handler(newAuditlogProxy(scaledContext)) // Pandaria
+
 	return authed
 }
 
@@ -155,4 +157,8 @@ func newProxy(scaledContext *config.ScaledContext) http.Handler {
 
 func newHarborProxy(scaledContext *config.ScaledContext) http.Handler {
 	return httpproxy.NewHarborProxy("/harbor/", whitelist.Proxy.Get, scaledContext)
+}
+
+func newAuditlogProxy(scaledContext *config.ScaledContext) http.Handler {
+	return httpproxy.NewAuditlogProxy("/auditlog/", whitelist.Proxy.Get, scaledContext)
 }
