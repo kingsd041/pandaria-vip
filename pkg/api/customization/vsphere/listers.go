@@ -254,12 +254,12 @@ func listDataStores(ctx context.Context, finder *find.Finder) ([]string, error) 
 }
 
 func listFolders(ctx context.Context, finder *find.Finder) ([]string, error) {
-	folders, err := finder.FolderList(ctx, "*")
+	folders, err := finder.FolderList(ctx, "vm/*")
 	if err != nil {
 		return nil, err
 	}
 
-	data := []string{"/"} //slash default
+	data := []string{""}
 	for _, f := range folders {
 		data = append(data, f.InventoryPath)
 	}
