@@ -90,17 +90,23 @@ func (n *PandariaNamespaceController) sync(key string, obj *corev1.Namespace) (r
 				return nil, err
 			}
 			for _, secret := range secrets {
+				// for pandaria
+				if val, ok := secret.Annotations["kubernetes.io/service-account.name"]; ok {
+					if val == "default" {
+						continue
+					}
+				}
 				namespacedSecret := getNamespacedSecret(secret, obj.Name)
 				// for pandaria
-				exist, err := n.clusterSecretsClient.GetNamespaced(obj.Name, namespacedSecret.Name, metav1.GetOptions{})
-				if err != nil && !errors.IsNotFound(err) {
-					return nil, err
-				}
-				if exist == nil {
-					_, err = n.clusterSecretsClient.Create(namespacedSecret)
-					if err != nil && !errors.IsAlreadyExists(err) {
-						return nil, err
+				_, err := n.clusterSecretsClient.GetNamespaced(obj.Name, namespacedSecret.Name, metav1.GetOptions{})
+				if err != nil {
+					if errors.IsNotFound(err) {
+						_, err = n.clusterSecretsClient.Create(namespacedSecret)
+						if err != nil && !errors.IsAlreadyExists(err) {
+							return nil, err
+						}
 					}
+					continue
 				}
 			}
 		}
@@ -192,16 +198,16 @@ func (s *ControllerPandaria) createOrUpdate(obj *corev1.Secret, action string) e
 		switch action {
 		case create:
 			// for pandaria
-			exist, err := s.secrets.GetNamespaced(namespace.Name, namespacedSecret.Name, metav1.GetOptions{})
-			if err != nil && !errors.IsNotFound(err) {
-				return err
-			}
-			if exist == nil {
-				logrus.Infof("Copying secret [%s] into namespace [%s]", namespacedSecret.Name, namespace.Name)
-				_, err := s.secrets.Create(namespacedSecret)
-				if err != nil && !errors.IsAlreadyExists(err) {
-					return err
+			_, err := s.secrets.GetNamespaced(namespace.Name, namespacedSecret.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					logrus.Infof("Copying secret [%s] into namespace [%s]", namespacedSecret.Name, namespace.Name)
+					_, err := s.secrets.Create(namespacedSecret)
+					if err != nil && !errors.IsAlreadyExists(err) {
+						return err
+					}
 				}
+				continue
 			}
 		case update:
 			_, err := s.secrets.Update(namespacedSecret)
