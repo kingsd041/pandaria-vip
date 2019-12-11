@@ -12,6 +12,9 @@ import (
 	v1beta12 "github.com/rancher/types/apis/extensions/v1beta1"
 	"github.com/rancher/types/config"
 	"k8s.io/api/extensions/v1beta1"
+
+	// PANDARIA
+	"github.com/rancher/rancher/pkg/controllers/user/ingress"
 )
 
 type IngressHostGen struct {
@@ -27,11 +30,17 @@ func Register(ctx context.Context, userOnlyContext *config.UserOnlyContext) {
 
 func isGeneratedDomain(obj *v1beta1.Ingress, host, domain string) bool {
 	parts := strings.Split(host, ".")
-	return strings.HasSuffix(host, "."+domain) && len(parts) == 8 && parts[1] == obj.Namespace
+	// PANDARIA
+	return strings.HasSuffix(host, "."+domain) && len(parts) >= 8 && parts[1] == obj.Namespace
 }
 
 func (i *IngressHostGen) sync(key string, obj *v1beta1.Ingress) (runtime.Object, error) {
 	if obj == nil {
+		return nil, nil
+	}
+
+	// PANDARIA: skip rancher-server ingress
+	if _, ok := obj.Annotations[ingress.IngressRServerAnnotation]; ok {
 		return nil, nil
 	}
 

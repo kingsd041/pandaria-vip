@@ -16,6 +16,9 @@ import (
 	"github.com/sirupsen/logrus"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
+
+	// PANDARIA
+	"github.com/rancher/rancher/pkg/controllers/user/ingress"
 )
 
 const (
@@ -42,11 +45,17 @@ type Controller struct {
 
 func isGeneratedDomain(obj *extensionsv1beta1.Ingress, host, domain string) bool {
 	parts := strings.Split(host, ".")
-	return strings.HasSuffix(host, "."+domain) && len(parts) == 6 && parts[1] == obj.Namespace
+	// PANDARIA
+	return strings.HasSuffix(host, "."+domain) && len(parts) >= 6 && parts[1] == obj.Namespace
 }
 
 func (c *Controller) sync(key string, obj *extensionsv1beta1.Ingress) (runtime.Object, error) {
 	if obj == nil || obj.DeletionTimestamp != nil {
+		return nil, nil
+	}
+
+	// PANDARIA: skip rancher-server ingress
+	if _, ok := obj.Annotations[ingress.IngressRServerAnnotation]; ok {
 		return nil, nil
 	}
 
