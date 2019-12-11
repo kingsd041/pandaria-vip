@@ -39,7 +39,7 @@ var (
 	MachineVersion                    = NewSetting("machine-version", "dev")
 	Namespace                         = NewSetting("namespace", os.Getenv("CATTLE_NAMESPACE"))
 	PeerServices                      = NewSetting("peer-service", os.Getenv("CATTLE_PEER_SERVICE"))
-	RDNSServerBaseURL                 = NewSetting("rdns-base-url", "https://api.lb.rancher.cloud/v1")
+	RDNSServerBaseURL                 = NewSetting("rdns-base-url", "") // PANDARIA
 	RkeVersion                        = NewSetting("rke-version", "")
 	RkeMetadataConfig                 = NewSetting("rke-metadata-config", getMetadataConfig())
 	ServerImage                       = NewSetting("server-image", "rancher/rancher")

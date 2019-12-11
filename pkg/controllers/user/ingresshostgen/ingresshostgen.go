@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/rancher/rancher/pkg/controllers/user/approuter"
+	//"github.com/rancher/rancher/pkg/controllers/user/approuter" // PANDARIA
 	"github.com/rancher/rancher/pkg/settings"
 	v1beta12 "github.com/rancher/types/apis/extensions/v1beta1"
 	"github.com/rancher/types/config"
@@ -35,6 +35,12 @@ func (i *IngressHostGen) sync(key string, obj *v1beta1.Ingress) (runtime.Object,
 		return nil, nil
 	}
 
+	// PANDARIA
+	isRDNS := settings.RDNSServerBaseURL.Get()
+	if isRDNS != "" {
+		return nil, nil
+	}
+
 	ipDomain := settings.IngressIPDomain.Get()
 	if ipDomain == "" {
 		return nil, nil
@@ -54,7 +60,7 @@ func (i *IngressHostGen) sync(key string, obj *v1beta1.Ingress) (runtime.Object,
 
 	changed := false
 	for _, rule := range obj.Spec.Rules {
-		if (isGeneratedDomain(obj, rule.Host, ipDomain) || rule.Host == ipDomain) && rule.Host != xipHost && ipDomain != approuter.RdnsIPDomain {
+		if (isGeneratedDomain(obj, rule.Host, ipDomain) || rule.Host == ipDomain) && rule.Host != xipHost /* PANDARIA */ {
 			changed = true
 			break
 		}

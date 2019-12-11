@@ -20,9 +20,11 @@ import (
 
 const (
 	annotationIngressClass = "kubernetes.io/ingress.class"
+	annotationGlobalDNS    = "rancher.io/globalDNS.hostname" // PANDARIA
 	ingressClassNginx      = "nginx"
-	RdnsIPDomain           = "lb.rancher.cloud"
-	maxHost                = 10
+	//RdnsIPDomain           = "lb.rancher.cloud" // PANDARIA
+	ingressClassExternalDNS = "rancher-external-dns" // PANDARIA
+	maxHost                 = 10
 )
 
 var (
@@ -48,14 +50,31 @@ func (c *Controller) sync(key string, obj *extensionsv1beta1.Ingress) (runtime.O
 		return nil, nil
 	}
 
-	ipDomain := settings.IngressIPDomain.Get()
-	if ipDomain != RdnsIPDomain {
+	// PANDARIA
+	//ipDomain := settings.IngressIPDomain.Get()
+	//if ipDomain != RdnsIPDomain {
+	//	return nil, nil
+	//}
+	isRDNS := settings.RDNSServerBaseURL.Get()
+	if isRDNS == "" {
 		return nil, nil
 	}
+	if _, ok := obj.Annotations[annotationGlobalDNS]; ok {
+		logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+		return nil, nil
+	}
+	if v, ok := obj.Annotations[annotationIngressClass]; ok {
+		if v == ingressClassExternalDNS {
+			logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+			return nil, nil
+		}
+	}
+	ipDomain := settings.IngressIPDomain.Get()
 
 	isNeedSync := false
 	for _, rule := range obj.Spec.Rules {
-		if strings.HasSuffix(rule.Host, RdnsIPDomain) {
+		// PANDARIA
+		if strings.HasSuffix(rule.Host, ipDomain) {
 			isNeedSync = true
 			break
 		}
@@ -91,12 +110,14 @@ func (c *Controller) sync(key string, obj *extensionsv1beta1.Ingress) (runtime.O
 	}
 	//As a new secret is created, all the ingress obj will be updated
 	if created {
-		return nil, c.refreshAll(fqdn)
+		// PANDARIA
+		return nil, c.refreshAll(fqdn, ipDomain)
 	}
-	return c.refresh(fqdn, obj)
+	// PANDARIA
+	return c.refresh(fqdn, obj, ipDomain)
 }
 
-func (c *Controller) refresh(rootDomain string, obj *extensionsv1beta1.Ingress) (*extensionsv1beta1.Ingress, error) {
+func (c *Controller) refresh(rootDomain string, obj *extensionsv1beta1.Ingress, ipDomain string) (*extensionsv1beta1.Ingress, error) {
 	if obj == nil || obj.DeletionTimestamp != nil {
 		return nil, errors.New("Got a nil ingress object")
 	}
@@ -136,7 +157,8 @@ func (c *Controller) refresh(rootDomain string, obj *extensionsv1beta1.Ingress) 
 	// Also need to update rules for hostname when using nginx
 	for i, rule := range newObj.Spec.Rules {
 		logrus.Debugf("Got ingress resource hostname: %s", rule.Host)
-		if strings.HasSuffix(rule.Host, RdnsIPDomain) {
+		// PANDARIA
+		if strings.HasSuffix(rule.Host, ipDomain) {
 			newObj.Spec.Rules[i].Host = targetHostname
 		}
 	}
@@ -148,13 +170,24 @@ func (c *Controller) refresh(rootDomain string, obj *extensionsv1beta1.Ingress) 
 	return newObj, nil
 }
 
-func (c *Controller) refreshAll(rootDomain string) error {
+func (c *Controller) refreshAll(rootDomain, ipDomain string) error {
 	ingresses, err := c.ingressLister.List("", labels.NewSelector())
 	if err != nil {
 		return err
 	}
 	for _, obj := range ingresses {
-		if _, err = c.refresh(rootDomain, obj); err != nil {
+		// PANDARIA
+		if _, ok := obj.Annotations[annotationGlobalDNS]; ok {
+			logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+			continue
+		}
+		if v, ok := obj.Annotations[annotationIngressClass]; ok {
+			if v == ingressClassExternalDNS {
+				logrus.Debugf("ingress %s has not valid annotations", obj.Name)
+				continue
+			}
+		}
+		if _, err = c.refresh(rootDomain, obj, ipDomain); err != nil {
 			logrus.WithError(err).Errorf("refresh ingress %s:%s hostname annotation error", obj.Namespace, obj.Name)
 		}
 	}
@@ -170,8 +203,13 @@ func (c *Controller) getRdnsHostname(obj *extensionsv1beta1.Ingress, rootDomain 
 
 func (c *Controller) renew(ctx context.Context) {
 	for range ticker.Context(ctx, renewInterval) {
-		ipDomain := settings.IngressIPDomain.Get()
-		if ipDomain != RdnsIPDomain {
+		// PANDARIA
+		//ipDomain := settings.IngressIPDomain.Get()
+		//if ipDomain != RdnsIPDomain {
+		//	continue
+		//}
+		isRDNS := settings.RDNSServerBaseURL.Get()
+		if isRDNS == "" {
 			continue
 		}
 		serverURL := settings.RDNSServerBaseURL.Get()

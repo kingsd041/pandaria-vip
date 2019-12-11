@@ -85,6 +85,11 @@ func (n *ProviderCatalogLauncher) sync(key string, obj *v3.GlobalDNSProvider) (r
 		return n.handleAlidnsProvider(obj)
 	}
 
+	// PANDARIA
+	if obj.Spec.RDNSProviderConfig != nil {
+		return n.handleRDNSProvider(obj)
+	}
+
 	return nil, nil
 }
 
