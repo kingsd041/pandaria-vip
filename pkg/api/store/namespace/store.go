@@ -132,9 +132,10 @@ func (p *Store) validateResourceQuota(apiContext *types.APIContext, schema *type
 
 	var nsLimits []*v3.ResourceQuotaLimit
 	var namespaces []clusterclient.Namespace
+	// PANDARIA
 	options := &types.QueryOptions{
 		Conditions: []*types.QueryCondition{
-			types.NewConditionFromString("projectId", types.ModifierEQ, convert.ToString(data["projectId"])),
+			types.NewConditionFromString("projectId", types.ModifierEQ, projectID),
 		},
 	}
 	if err := access.List(apiContext, &schema.Version, clusterclient.NamespaceType, options, &namespaces); err != nil {

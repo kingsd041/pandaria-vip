@@ -98,10 +98,22 @@ func (n *NamespaceController) sync(key string, obj *corev1.Namespace) (runtime.O
 				return nil, err
 			}
 			for _, secret := range secrets {
+				// PANDARIA
+				if val, ok := secret.Annotations["kubernetes.io/service-account.name"]; ok {
+					if val == "default" {
+						continue
+					}
+				}
 				namespacedSecret := getNamespacedSecret(secret, obj.Name)
-				_, err := n.clusterSecretsClient.Create(namespacedSecret)
-				if err != nil && !errors.IsAlreadyExists(err) {
-					return nil, err
+				_, err := n.clusterSecretsClient.GetNamespaced(obj.Name, namespacedSecret.Name, metav1.GetOptions{})
+				if err != nil {
+					if errors.IsNotFound(err) {
+						_, err = n.clusterSecretsClient.Create(namespacedSecret)
+						if err != nil && !errors.IsAlreadyExists(err) {
+							return nil, err
+						}
+					}
+					continue
 				}
 			}
 		}
@@ -192,10 +204,17 @@ func (s *Controller) createOrUpdate(obj *corev1.Secret, action string) error {
 		namespacedSecret := getNamespacedSecret(obj, namespace.Name)
 		switch action {
 		case create:
-			logrus.Infof("Copying secret [%s] into namespace [%s]", namespacedSecret.Name, namespace.Name)
-			_, err := s.secrets.Create(namespacedSecret)
-			if err != nil && !errors.IsAlreadyExists(err) {
-				return err
+			// PANDARIA
+			_, err := s.secrets.GetNamespaced(namespace.Name, namespacedSecret.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					logrus.Infof("Copying secret [%s] into namespace [%s]", namespacedSecret.Name, namespace.Name)
+					_, err := s.secrets.Create(namespacedSecret)
+					if err != nil && !errors.IsAlreadyExists(err) {
+						return err
+					}
+				}
+				continue
 			}
 		case update:
 			_, err := s.secrets.Update(namespacedSecret)

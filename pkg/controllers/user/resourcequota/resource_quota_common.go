@@ -134,6 +134,8 @@ var resourceQuotaConversion = map[string]string{
 	"requestsStorage":        "requests.storage",
 	"limitsCpu":              "limits.cpu",
 	"limitsMemory":           "limits.memory",
+	"requestsGpuMemory":      "requests.rancher.io/gpu-mem", // PANDARIA
+	"requestsGpuCount":       "requests.nvidia.com/gpu",     // PANDARIA
 }
 
 func getNamespaceResourceQuota(ns *corev1.Namespace) string {
