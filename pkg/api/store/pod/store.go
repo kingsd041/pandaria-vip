@@ -8,6 +8,10 @@ import (
 	v3 "github.com/rancher/types/apis/management.cattle.io/v3"
 	"github.com/rancher/types/config"
 	"k8s.io/client-go/tools/cache"
+
+	// pandaria
+	"github.com/rancher/rancher/pkg/api/customization/pod"
+	"github.com/rancher/types/user"
 )
 
 const (
@@ -36,6 +40,7 @@ func newPT(clusterManager *clustermanager.Manager, scaledContext *config.ScaledC
 	pt := &podTransformer{
 		clusterManager: clusterManager,
 		nodeIndexer:    scaledContext.Management.Nodes("").Controller().Informer().GetIndexer(),
+		userManager:    scaledContext.UserManager,
 	}
 	return pt.transformer
 }
@@ -43,6 +48,7 @@ func newPT(clusterManager *clustermanager.Manager, scaledContext *config.ScaledC
 type podTransformer struct {
 	clusterManager *clustermanager.Manager
 	nodeIndexer    cache.Indexer
+	userManager    user.Manager
 }
 
 func (p *podTransformer) transformer(context *types.APIContext, schema *types.Schema, data map[string]interface{}, opt *types.QueryOptions) (map[string]interface{}, error) {
@@ -66,5 +72,11 @@ func (p *podTransformer) transformer(context *types.APIContext, schema *types.Sc
 		data["nodeId"] = ref.FromStrings(node.Namespace, node.Name)
 	}
 
+	actionWrapper := pod.ActionWrapper{
+		UserManager:    p.userManager,
+		ClusterManager: p.clusterManager,
+	}
+	schema.Formatter = pod.Formatter
+	schema.ActionHandler = actionWrapper.ActionHandler
 	return data, nil
 }
