@@ -130,15 +130,14 @@ func newAuthed(tokenAPI http.Handler, managementAPI http.Handler, k8sproxy http.
 	authed.Path("/meta/aksVirtualNetworks").Handler(capabilities.NewAKSVirtualNetworksHandler())
 	authed.Path("/meta/vsphere/{field}").Handler(vsphere.NewVsphereHandler(scaledContext))
 	authed.PathPrefix("/meta/proxy").Handler(newProxy(scaledContext))
-	authed.PathPrefix("/meta/harbor").Handler(newHarborProxy(scaledContext)) // Pandaria
+	authed.PathPrefix("/meta/harbor").Handler(newHarborProxy(scaledContext))     // Pandaria
+	authed.PathPrefix("/meta/auditlog").Handler(newAuditlogProxy(scaledContext)) // Pandaria
 	authed.PathPrefix("/meta").Handler(managementAPI)
 	authed.PathPrefix("/v3/identit").Handler(tokenAPI)
 	authed.PathPrefix("/v3/token").Handler(tokenAPI)
 	authed.PathPrefix("/k8s/clusters/").Handler(k8sproxy)
 	authed.PathPrefix("/v1-telemetry").Handler(telemetry.NewProxy())
 	authed.PathPrefix(managementSchema.Version.Path).Handler(managementAPI)
-
-	authed.PathPrefix("/meta/auditlog").Handler(newAuditlogProxy(scaledContext)) // Pandaria
 
 	return authed
 }
