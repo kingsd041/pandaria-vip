@@ -77,6 +77,7 @@ var (
 
 	SystemGPUMonitoringCatalogID = NewSetting("system-gpu-monitoring-catalog-id", "catalog://?catalog=pandaria&template=rancher-gpu-monitoring&version=0.0.1") // Pandaria gpu management
 	SystemGPUManagementCatalogID = NewSetting("system-gpu-management-catalog-id", "catalog://?catalog=pandaria&template=rancher-gpu-management&version=0.0.1") // Pandaria gpu management
+	AuditlogServer               = NewSetting("auditlog-server-url", "")                                                                                       //Pandria auditlog
 )
 
 func init() {
