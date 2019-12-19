@@ -1,5 +1,7 @@
 package clusterprovisioner
 
+// PANDARIA: networkaddons hijack cluster provisioning process to change rke config for some extra addons
+
 import (
 	"fmt"
 	"io/ioutil"
@@ -76,6 +78,10 @@ func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig,
 		cfg.AddonsInclude = []string{}
 	}
 	cfg.AddonsInclude = append([]string{path}, cfg.AddonsInclude...)
+
+	// add certs args
+	setCertsArgs(cfg)
+
 	return nil
 }
 
@@ -126,6 +132,10 @@ func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig, c
 		cfg.AddonsInclude = []string{}
 	}
 	cfg.AddonsInclude = append([]string{path}, cfg.AddonsInclude...)
+
+	// add certs args
+	setCertsArgs(cfg)
+
 	return nil
 }
 
@@ -208,4 +218,20 @@ func resolveControllerClusterCIDR(cidr, content string) string {
 		})
 	}
 	return content
+}
+
+// set certs args for kube-apiserver allowing admission webhook
+func setCertsArgs(cfg *v3.RancherKubernetesEngineConfig) {
+	setArg := func(m map[string]string, key string, value string) {
+		if m[key] == "" {
+			m[key] = value
+		}
+	}
+	if cfg.Services.KubeController.ExtraArgs == nil {
+		cfg.Services.KubeController.ExtraArgs = map[string]string{}
+	}
+	setArg(cfg.Services.KubeController.ExtraArgs, "client-ca-file", "/etc/kubernetes/ssl/kube-ca.pem")
+	setArg(cfg.Services.KubeController.ExtraArgs, "cluster-signing-cert-file", "/etc/kubernetes/ssl/kube-ca.pem")
+	setArg(cfg.Services.KubeController.ExtraArgs, "cluster-signing-key-file", "/etc/kubernetes/ssl/kube-ca-key.pem")
+	setArg(cfg.Services.KubeController.ExtraArgs, "requestheader-client-ca-file", "/etc/kubernetes/ssl/kube-apiserver-requestheader-ca.pem")
 }
