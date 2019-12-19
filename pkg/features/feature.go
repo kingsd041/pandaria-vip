@@ -17,7 +17,7 @@ var (
 
 	// Features, ex.: ClusterRandomName = newFeature("cluster-randomizer", false)
 
-	UnsupportedStorageDrivers = newFeature("unsupported-storage-drivers", false)
+	UnsupportedStorageDrivers = newFeature("unsupported-storage-drivers", true) // PANDARIA
 	IstioVirtualServiceUI     = newFeature("istio-virtual-service-ui", true)
 )
 
