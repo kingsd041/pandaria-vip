@@ -383,7 +383,193 @@ trigger:
 
 node:
   instance: agent-arm64
+---
+kind: pipeline
+name: default-windows-1809
 
+platform:
+  os: windows
+  arch: amd64
+  version: 1809
+
+steps:
+  - name: build
+    pull: always
+    image: maiwj/dapper:windows-1809
+    commands:
+      - powershell -NoLogo -NonInteractive -File ./pandaria_prepare_windows.ps1
+      - dapper.exe -f Dockerfile-windows-pandaria.dapper -d ci
+    volumes:
+      - name: docker_pipe
+        path: \\\\.\\pipe\\docker_engine
+    when:
+      event:
+        - push
+        - pull_request
+        - tag
+
+  - name: stage-binaries
+    image: maiwj/dapper:windows-1809
+    commands:
+      - "cp -r ./bin/* ./package/windows/"
+    when:
+      event:
+        - push
+        - tag
+
+  - name: docker-publish-head-agent
+    image: plugins/docker:windows-1809-amd64
+    settings:
+      build_args:
+        - SERVERCORE_VERSION=1809
+        - ARCH=amd64
+        - VERSION=${DRONE_BRANCH/release\//}-dev
+      context: package/windows
+      custom_dns: 1.1.1.1
+      dockerfile: package/windows/Dockerfile.agent
+      password:
+        from_secret: docker_password
+      repo: cnrancher/rancher-agent
+      tag: ${DRONE_BRANCH/release\//}-dev-windows-1809
+      username:
+        from_secret: docker_username
+    volumes:
+      - name: docker_pipe
+        path: \\\\.\\pipe\\docker_engine
+    when:
+      branch:
+        - release/v2.3-ent
+      event:
+        - push
+
+  - name: docker-publish-agent
+    image: plugins/docker:windows-1809-amd64
+    settings:
+      build_args:
+        - SERVERCORE_VERSION=1809
+        - ARCH=amd64
+        - "VERSION=${DRONE_TAG}"
+      context: package/windows
+      custom_dns: 1.1.1.1
+      dockerfile: package/windows/Dockerfile.agent
+      password:
+        from_secret: docker_password
+      repo: cnrancher/rancher-agent
+      tag: "${DRONE_TAG}-windows-1809"
+      username:
+        from_secret: docker_username
+    volumes:
+      - name: docker_pipe
+        path: \\\\.\\pipe\\docker_engine
+    when:
+      event:
+        - tag
+
+volumes:
+  - name: docker_pipe
+    host:
+      path: \\\\.\\pipe\\docker_engine
+
+trigger:
+  event:
+    exclude:
+      - promote
+node:
+  instance: agent-windows-1809
+
+---
+kind: pipeline
+name: default-windows-1903
+
+platform:
+  os: windows
+  arch: amd64
+  version: 1903
+
+steps:
+  - name: build
+    pull: always
+    image: maiwj/dapper:windows-1903
+    commands:
+      - powershell -NoLogo -NonInteractive -File ./pandaria_prepare_windows.ps1
+      - dapper.exe -f Dockerfile-windows-pandaria.dapper -d ci
+    volumes:
+      - name: docker_pipe
+        path: \\\\.\\pipe\\docker_engine
+    when:
+      event:
+        - push
+        - pull_request
+        - tag
+
+  - name: stage-binaries
+    image: maiwj/dapper:windows-1903
+    commands:
+      - "cp -r ./bin/* ./package/windows/"
+    when:
+      event:
+        - push
+        - tag
+
+  - name: docker-publish-head-agent
+    image: plugins/docker:windows-1903-amd64
+    settings:
+      build_args:
+        - SERVERCORE_VERSION=1903
+        - ARCH=amd64
+        - VERSION=${DRONE_BRANCH/release\//}-dev
+      context: package/windows
+      custom_dns: 1.1.1.1
+      dockerfile: package/windows/Dockerfile.agent
+      password:
+        from_secret: docker_password
+      repo: cnrancher/rancher-agent
+      tag: ${DRONE_BRANCH/release\//}-dev-windows-1903
+      username:
+        from_secret: docker_username
+    volumes:
+      - name: docker_pipe
+        path: \\\\.\\pipe\\docker_engine
+    when:
+      branch:
+        - release/v2.3-ent
+      event:
+        - push
+
+  - name: docker-publish-agent
+    image: plugins/docker:windows-1903-amd64
+    settings:
+      build_args:
+        - SERVERCORE_VERSION=1903
+        - ARCH=amd64
+        - "VERSION=${DRONE_TAG}"
+      context: package/windows
+      custom_dns: 1.1.1.1
+      dockerfile: package/windows/Dockerfile.agent
+      password:
+        from_secret: docker_password
+      repo: cnrancher/rancher-agent
+      tag: "${DRONE_TAG}-windows-1903"
+      username:
+        from_secret: docker_username
+    volumes:
+      - name: docker_pipe
+        path: \\\\.\\pipe\\docker_engine
+    when:
+      event:
+        - tag
+
+volumes:
+  - name: docker_pipe
+    host:
+      path: \\\\.\\pipe\\docker_engine
+
+trigger:
+  event:
+    exclude:
+      - promote
+node:
+  instance: agent-windows-1903
 ---
 kind: pipeline
 name: manifest
@@ -475,5 +661,7 @@ node:
 depends_on:
   - default-linux-amd64
   - default-linux-arm64
+  - default-windows-1903
+  - default-windows-1809
 
 ...
