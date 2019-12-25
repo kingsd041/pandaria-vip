@@ -136,6 +136,16 @@ func (s Setting) Get() string {
 		s := settings[s.Name]
 		return s.Default
 	}
+
+	// fix for pandaria
+	if s.Name == "server-version" {
+		v := provider.Get(s.Name)
+		if strings.HasSuffix(v, "ent-dev") {
+			return "dev"
+		}
+		return strings.SplitN(v, "-ent", 2)[0]
+	}
+
 	return provider.Get(s.Name)
 }
 
@@ -184,6 +194,12 @@ func releaseServerVersion(serverVersion string) bool {
 	if serverVersion == "" {
 		return false
 	}
+
+	// fix for pandaria
+	if strings.Contains(serverVersion, "ent") {
+		return true
+	}
+
 	splitVersion := strings.Split(serverVersion[1:], ".")
 	if len(splitVersion) != 3 {
 		return false
