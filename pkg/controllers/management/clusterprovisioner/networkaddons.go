@@ -20,6 +20,7 @@ import (
 const (
 	pluginMultusFlannel = "multus-flannel-macvlan"
 	pluginMultusCanal   = "multus-canal-macvlan"
+	extraPluginName     = "pandariaExtraPluginName"
 )
 
 func (p *Provisioner) handleNetworkPlugin(old v3.ClusterSpec, clusterName string) (v3.ClusterSpec, error) {
@@ -74,8 +75,12 @@ func (p *Provisioner) handleMultusFlannel(cfg *v3.RancherKubernetesEngineConfig,
 
 	// rewrite network option and insert addons_include
 	cfg.Network.Plugin = "none"
+	cfg.Network.Options[extraPluginName] = pluginMultusFlannel
+
 	if cfg.AddonsInclude == nil {
 		cfg.AddonsInclude = []string{}
+	} else {
+		cfg.AddonsInclude = removeContainString(cfg.AddonsInclude, pluginMultusFlannel)
 	}
 	cfg.AddonsInclude = append([]string{path}, cfg.AddonsInclude...)
 
@@ -128,8 +133,12 @@ func (p *Provisioner) handleMultusCanal(cfg *v3.RancherKubernetesEngineConfig, c
 
 	// rewrite network option and insert addons_include
 	cfg.Network.Plugin = "none"
+	cfg.Network.Options[extraPluginName] = pluginMultusCanal
+
 	if cfg.AddonsInclude == nil {
 		cfg.AddonsInclude = []string{}
+	} else {
+		cfg.AddonsInclude = removeContainString(cfg.AddonsInclude, pluginMultusCanal)
 	}
 	cfg.AddonsInclude = append([]string{path}, cfg.AddonsInclude...)
 
@@ -234,4 +243,15 @@ func setCertsArgs(cfg *v3.RancherKubernetesEngineConfig) {
 	setArg(cfg.Services.KubeController.ExtraArgs, "cluster-signing-cert-file", "/etc/kubernetes/ssl/kube-ca.pem")
 	setArg(cfg.Services.KubeController.ExtraArgs, "cluster-signing-key-file", "/etc/kubernetes/ssl/kube-ca-key.pem")
 	setArg(cfg.Services.KubeController.ExtraArgs, "requestheader-client-ca-file", "/etc/kubernetes/ssl/kube-apiserver-requestheader-ca.pem")
+}
+
+func removeContainString(in []string, s string) []string {
+	out := []string{}
+	for _, v := range in {
+		if strings.Contains(v, s) {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
 }
