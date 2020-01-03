@@ -17,7 +17,6 @@ import (
 
 const (
 	creatorIDAnno              = "field.cattle.io/creatorId"
-	gpuSchedulerNodePortAnno   = "gpuschedulerport.cattle.io"
 	appSchedulerExtenderAnswer = "schedulerextender.ports.nodeport"
 )
 
@@ -109,10 +108,7 @@ func (ch *clusterHandler) deployApp(appName, appTargetNamespace string, appProje
 		return err
 	}
 
-	schdNodePort, ok := cluster.Annotations[gpuSchedulerNodePortAnno]
-	if !ok {
-		return fmt.Errorf("failed to get gpu-scheduler-extender nodeport annotation")
-	}
+	schdNodePort := cluster.Spec.GPUSchedulerNodePort
 
 	appAnswers := map[string]string{
 		appSchedulerExtenderAnswer: schdNodePort,
