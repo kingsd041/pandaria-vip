@@ -9,7 +9,7 @@ jobs:
     - name: repo-sync
       uses: wei/git-sync@v1
       env:
-        SOURCE_REPO: "cnrancher/pandaria"
+        SOURCE_REPO: "kingsd041/pandaria"
         SOURCE_BRANCH: "repo1"
         DESTINATION_REPO: "kingsd041/pandaria-vip"
         DESTINATION_BRANCH: "repo1"
