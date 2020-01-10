@@ -1,0 +1,17 @@
+on: 
+  release:
+    # Only use the types keyword to narrow down the activity types that will trigger your workflow.
+    types: [published, created, edited, deleted]
+jobs:
+  repo-sync:
+    runs-on: ubuntu-latest
+    steps:
+    - name: repo-sync
+      uses: kingsd041/git-sync@ksd/v1.0
+      env:
+        SOURCE_REPO: "cnrancher/pandaria"
+        DESTINATION_REPO: "ranchervip/pandaria"
+        BRANCH_NAME: "release/v2.2-ent release/v2.3-ent"
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      with:
+        args: $SOURCE_REPO $DESTINATION_REPO $BRANCH_NAME
