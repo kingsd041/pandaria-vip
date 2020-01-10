@@ -7,11 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: repo-sync
-      uses: kingsd041/git-sync@ksd/v1.0
+      uses: wei/git-sync@v1
       env:
         SOURCE_REPO: "cnrancher/pandaria"
+        SOURCE_BRANCH: "repo1"
         DESTINATION_REPO: "kingsd041/pandaria-vip"
-        BRANCH_NAME: "release/v2.3-ent release/v2.2-ent"
+        DESTINATION_BRANCH: "repo1"
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       with:
-        args: $SOURCE_REPO $DESTINATION_REPO $BRANCH_NAME
+        args: $SOURCE_REPO $SOURCE_BRANCH $DESTINATION_REPO $DESTINATION_BRANCH
